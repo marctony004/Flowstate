@@ -1,45 +1,59 @@
-import { useEffect, useState } from "react";
-import { Users, Plus, Search, Star } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Users, Plus, Search, Star, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { CollaboratorNote } from "@/types/database";
-
-interface CollaboratorWithProfile extends CollaboratorNote {
-  profile?: {
-    display_name: string;
-    avatar_url: string | null;
-    role: string;
-  };
-}
+import CollaboratorDialog from "@/components/dashboard/CollaboratorDialog";
+import DeleteDialog from "@/components/dashboard/DeleteDialog";
 
 export default function CollaboratorsPage() {
   const { session } = useSession();
-  const [collaborators, setCollaborators] = useState<
-    CollaboratorWithProfile[]
-  >([]);
+  const [collaborators, setCollaborators] = useState<CollaboratorNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editCollab, setEditCollab] = useState<CollaboratorNote | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<CollaboratorNote | null>(
+    null
+  );
+  const [deleting, setDeleting] = useState(false);
+
+  const fetchCollaborators = useCallback(async () => {
     if (!session?.user.id) return;
-
-    async function fetchCollaborators() {
-      const { data } = await supabase
-        .from("collaborator_notes")
-        .select("*")
-        .eq("owner_id", session!.user.id)
-        .order("updated_at", { ascending: false });
-
-      setCollaborators(data ?? []);
-      setLoading(false);
-    }
-
-    fetchCollaborators();
+    const { data } = await supabase
+      .from("collaborator_notes")
+      .select("*")
+      .eq("owner_id", session.user.id)
+      .order("updated_at", { ascending: false });
+    setCollaborators(data ?? []);
+    setLoading(false);
   }, [session?.user.id]);
 
-  const filtered = collaborators.filter((c) =>
-    (c.strengths ?? "").toLowerCase().includes(search.toLowerCase())
+  useEffect(() => {
+    fetchCollaborators();
+  }, [fetchCollaborators]);
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    await supabase
+      .from("collaborator_notes")
+      .delete()
+      .eq("id", deleteTarget.id);
+    setDeleting(false);
+    setDeleteOpen(false);
+    setDeleteTarget(null);
+    fetchCollaborators();
+  }
+
+  const filtered = collaborators.filter(
+    (c) =>
+      (c.strengths ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      (c.notes ?? "").toLowerCase().includes(search.toLowerCase()) ||
+      c.collaborator_id.toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading) {
@@ -59,7 +73,12 @@ export default function CollaboratorsPage() {
             Manage your creative network
           </p>
         </div>
-        <Button>
+        <Button
+          onClick={() => {
+            setEditCollab(null);
+            setDialogOpen(true);
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Add Collaborator
         </Button>
@@ -90,7 +109,12 @@ export default function CollaboratorsPage() {
               : "Add collaborators to track your creative network."}
           </p>
           {!search && (
-            <Button>
+            <Button
+              onClick={() => {
+                setEditCollab(null);
+                setDialogOpen(true);
+              }}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add Collaborator
             </Button>
@@ -101,7 +125,7 @@ export default function CollaboratorsPage() {
           {filtered.map((collab) => (
             <div
               key={collab.id}
-              className="rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/50 hover:shadow-md"
+              className="group rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/50 hover:shadow-md"
             >
               <div className="mb-3 flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--accent)]/10 text-sm font-bold text-[var(--accent)]">
@@ -109,7 +133,7 @@ export default function CollaboratorsPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-foreground">
-                    Collaborator
+                    {collab.collaborator_id}
                   </p>
                   {collab.working_style && (
                     <p className="truncate text-xs text-muted-foreground">
@@ -117,14 +141,34 @@ export default function CollaboratorsPage() {
                     </p>
                   )}
                 </div>
-                {collab.rating && (
-                  <div className="flex items-center gap-1">
-                    <Star className="h-3.5 w-3.5 fill-[var(--warning)] text-[var(--warning)]" />
-                    <span className="text-xs font-medium text-foreground">
-                      {collab.rating}
-                    </span>
-                  </div>
-                )}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      setEditCollab(collab);
+                      setDialogOpen(true);
+                    }}
+                    className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDeleteTarget(collab);
+                      setDeleteOpen(true);
+                    }}
+                    className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-500 group-hover:opacity-100"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                  {collab.rating && (
+                    <div className="flex items-center gap-1">
+                      <Star className="h-3.5 w-3.5 fill-[var(--warning)] text-[var(--warning)]" />
+                      <span className="text-xs font-medium text-foreground">
+                        {collab.rating}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
               {collab.strengths && (
                 <p className="mb-2 text-sm text-muted-foreground">
@@ -148,6 +192,21 @@ export default function CollaboratorsPage() {
           ))}
         </div>
       )}
+
+      <CollaboratorDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        collaborator={editCollab}
+        onSuccess={fetchCollaborators}
+      />
+
+      <DeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={handleDelete}
+        entityName="Collaborator"
+        loading={deleting}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   Plus,
@@ -6,11 +6,15 @@ import {
   FolderKanban,
   Calendar,
   Music,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { Project } from "@/types/database";
+import ProjectDialog from "@/components/dashboard/ProjectDialog";
+import DeleteDialog from "@/components/dashboard/DeleteDialog";
 
 const statusColors: Record<string, string> = {
   active: "bg-[var(--success)] text-white",
@@ -26,22 +30,26 @@ export default function ProjectsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
 
-  useEffect(() => {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editProject, setEditProject] = useState<Project | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const fetchProjects = useCallback(async () => {
     if (!session?.user.id) return;
-
-    async function fetchProjects() {
-      const { data } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("owner_id", session!.user.id)
-        .order("updated_at", { ascending: false });
-
-      setProjects(data ?? []);
-      setLoading(false);
-    }
-
-    fetchProjects();
+    const { data } = await supabase
+      .from("projects")
+      .select("*")
+      .eq("owner_id", session.user.id)
+      .order("updated_at", { ascending: false });
+    setProjects(data ?? []);
+    setLoading(false);
   }, [session?.user.id]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
 
   const filtered = projects.filter((p) => {
     const matchesSearch = p.title
@@ -50,6 +58,16 @@ export default function ProjectsPage() {
     const matchesFilter = filter === "all" || p.status === filter;
     return matchesSearch && matchesFilter;
   });
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    await supabase.from("projects").delete().eq("id", deleteTarget.id);
+    setDeleting(false);
+    setDeleteOpen(false);
+    setDeleteTarget(null);
+    fetchProjects();
+  }
 
   if (loading) {
     return (
@@ -68,7 +86,12 @@ export default function ProjectsPage() {
             Manage your creative projects
           </p>
         </div>
-        <Button>
+        <Button
+          onClick={() => {
+            setEditProject(null);
+            setDialogOpen(true);
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" />
           New Project
         </Button>
@@ -120,7 +143,12 @@ export default function ProjectsPage() {
               : "Create your first project to start organizing your creative work."}
           </p>
           {!search && (
-            <Button>
+            <Button
+              onClick={() => {
+                setEditProject(null);
+                setDialogOpen(true);
+              }}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Create Project
             </Button>
@@ -129,48 +157,88 @@ export default function ProjectsPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((project) => (
-            <Link
+            <div
               key={project.id}
-              to={`/dashboard/projects/${project.id}`}
-              className="group rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/50 hover:shadow-md"
+              className="group relative rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/50 hover:shadow-md"
             >
-              <div className="mb-3 flex items-start justify-between">
-                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-lg font-bold text-primary">
-                  {project.title.charAt(0).toUpperCase()}
-                </div>
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[project.status] ?? "bg-muted text-muted-foreground"}`}
+              {/* Edit / Delete buttons */}
+              <div className="absolute right-3 top-3 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setEditProject(project);
+                    setDialogOpen(true);
+                  }}
+                  className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground"
                 >
-                  {project.status}
-                </span>
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setDeleteTarget(project);
+                    setDeleteOpen(true);
+                  }}
+                  className="rounded-md p-1.5 text-muted-foreground hover:bg-red-500/10 hover:text-red-500"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
               </div>
-              <h3 className="mb-1 text-base font-semibold text-foreground group-hover:text-primary">
-                {project.title}
-              </h3>
-              {project.description && (
-                <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
-                  {project.description}
-                </p>
-              )}
-              <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                {project.genre && (
-                  <span className="flex items-center gap-1">
-                    <Music className="h-3.5 w-3.5" />
-                    {project.genre}
+
+              <Link to={`/dashboard/projects/${project.id}`}>
+                <div className="mb-3 flex items-start justify-between">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-lg font-bold text-primary">
+                    {project.title.charAt(0).toUpperCase()}
+                  </div>
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColors[project.status] ?? "bg-muted text-muted-foreground"}`}
+                  >
+                    {project.status}
                   </span>
+                </div>
+                <h3 className="mb-1 text-base font-semibold text-foreground group-hover:text-primary">
+                  {project.title}
+                </h3>
+                {project.description && (
+                  <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
+                    {project.description}
+                  </p>
                 )}
-                {project.bpm && <span>{project.bpm} BPM</span>}
-                {project.due_date && (
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5" />
-                    {new Date(project.due_date).toLocaleDateString()}
-                  </span>
-                )}
-              </div>
-            </Link>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  {project.genre && (
+                    <span className="flex items-center gap-1">
+                      <Music className="h-3.5 w-3.5" />
+                      {project.genre}
+                    </span>
+                  )}
+                  {project.bpm && <span>{project.bpm} BPM</span>}
+                  {project.due_date && (
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {new Date(project.due_date).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              </Link>
+            </div>
           ))}
         </div>
       )}
+
+      <ProjectDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        project={editProject}
+        onSuccess={fetchProjects}
+      />
+
+      <DeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={handleDelete}
+        entityName="Project"
+        loading={deleting}
+      />
     </div>
   );
 }

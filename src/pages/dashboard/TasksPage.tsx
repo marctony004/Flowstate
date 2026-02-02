@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
-import { CheckSquare, Plus, Search } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { CheckSquare, Plus, Search, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { Task } from "@/types/database";
+import TaskDialog from "@/components/dashboard/TaskDialog";
+import DeleteDialog from "@/components/dashboard/DeleteDialog";
 
 const columns = [
   { key: "todo", label: "To Do" },
@@ -24,22 +26,36 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editTask, setEditTask] = useState<Task | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const fetchTasks = useCallback(async () => {
     if (!session?.user.id) return;
-
-    async function fetchTasks() {
-      const { data } = await supabase
-        .from("tasks")
-        .select("*")
-        .eq("created_by", session!.user.id)
-        .order("position", { ascending: true });
-
-      setTasks(data ?? []);
-      setLoading(false);
-    }
-
-    fetchTasks();
+    const { data } = await supabase
+      .from("tasks")
+      .select("*")
+      .eq("created_by", session.user.id)
+      .order("position", { ascending: true });
+    setTasks(data ?? []);
+    setLoading(false);
   }, [session?.user.id]);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    await supabase.from("tasks").delete().eq("id", deleteTarget.id);
+    setDeleting(false);
+    setDeleteOpen(false);
+    setDeleteTarget(null);
+    fetchTasks();
+  }
 
   const filtered = tasks.filter((t) =>
     t.title.toLowerCase().includes(search.toLowerCase())
@@ -62,7 +78,12 @@ export default function TasksPage() {
             Track your work across all projects
           </p>
         </div>
-        <Button>
+        <Button
+          onClick={() => {
+            setEditTask(null);
+            setDialogOpen(true);
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" />
           New Task
         </Button>
@@ -90,7 +111,12 @@ export default function TasksPage() {
           <p className="mb-6 text-sm text-muted-foreground">
             Create tasks to track your progress across projects.
           </p>
-          <Button>
+          <Button
+            onClick={() => {
+              setEditTask(null);
+              setDialogOpen(true);
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Create Task
           </Button>
@@ -113,15 +139,35 @@ export default function TasksPage() {
                   {colTasks.map((task) => (
                     <div
                       key={task.id}
-                      className="rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-sm"
+                      className="group rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/50 hover:shadow-sm"
                     >
                       <div className="mb-2 flex items-start justify-between">
                         <p className="text-sm font-medium text-foreground">
                           {task.title}
                         </p>
-                        <span
-                          className={`h-2 w-2 shrink-0 rounded-full ${priorityColors[task.priority] ?? "bg-muted"}`}
-                        />
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => {
+                              setEditTask(task);
+                              setDialogOpen(true);
+                            }}
+                            className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setDeleteTarget(task);
+                              setDeleteOpen(true);
+                            }}
+                            className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-500 group-hover:opacity-100"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                          <span
+                            className={`h-2 w-2 shrink-0 rounded-full ${priorityColors[task.priority] ?? "bg-muted"}`}
+                          />
+                        </div>
                       </div>
                       {task.description && (
                         <p className="mb-2 line-clamp-2 text-xs text-muted-foreground">
@@ -146,6 +192,21 @@ export default function TasksPage() {
           })}
         </div>
       )}
+
+      <TaskDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        task={editTask}
+        onSuccess={fetchTasks}
+      />
+
+      <DeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={handleDelete}
+        entityName="Task"
+        loading={deleting}
+      />
     </div>
   );
 }

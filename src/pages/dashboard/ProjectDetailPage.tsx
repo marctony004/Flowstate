@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   Calendar,
@@ -9,52 +9,94 @@ import {
   Lightbulb,
   Flag,
   Plus,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import supabase from "@/supabase";
 import type { Project, Task, Idea, Milestone } from "@/types/database";
+import ProjectDialog from "@/components/dashboard/ProjectDialog";
+import TaskDialog from "@/components/dashboard/TaskDialog";
+import DeleteDialog from "@/components/dashboard/DeleteDialog";
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const [editProjectOpen, setEditProjectOpen] = useState(false);
+  const [deleteProjectOpen, setDeleteProjectOpen] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
+
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [editTask, setEditTask] = useState<Task | null>(null);
+  const [deleteTaskOpen, setDeleteTaskOpen] = useState(false);
+  const [deleteTaskTarget, setDeleteTaskTarget] = useState<Task | null>(null);
+  const [deletingTask, setDeletingTask] = useState(false);
+
+  const fetchData = useCallback(async () => {
     if (!id) return;
-
-    async function fetchProject() {
-      const [projectRes, tasksRes, ideasRes, milestonesRes] =
-        await Promise.all([
-          supabase.from("projects").select("*").eq("id", id!).single(),
-          supabase
-            .from("tasks")
-            .select("*")
-            .eq("project_id", id!)
-            .order("position", { ascending: true }),
-          supabase
-            .from("ideas")
-            .select("*")
-            .eq("project_id", id!)
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("milestones")
-            .select("*")
-            .eq("project_id", id!)
-            .order("position", { ascending: true }),
-        ]);
-
-      setProject(projectRes.data);
-      setTasks(tasksRes.data ?? []);
-      setIdeas(ideasRes.data ?? []);
-      setMilestones(milestonesRes.data ?? []);
-      setLoading(false);
-    }
-
-    fetchProject();
+    const [projectRes, tasksRes, ideasRes, milestonesRes] = await Promise.all([
+      supabase.from("projects").select("*").eq("id", id).single(),
+      supabase
+        .from("tasks")
+        .select("*")
+        .eq("project_id", id)
+        .order("position", { ascending: true }),
+      supabase
+        .from("ideas")
+        .select("*")
+        .eq("project_id", id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("milestones")
+        .select("*")
+        .eq("project_id", id)
+        .order("position", { ascending: true }),
+    ]);
+    setProject(projectRes.data);
+    setTasks(tasksRes.data ?? []);
+    setIdeas(ideasRes.data ?? []);
+    setMilestones(milestonesRes.data ?? []);
+    setLoading(false);
   }, [id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  async function handleDeleteProject() {
+    if (!project) return;
+    setDeletingProject(true);
+    await supabase.from("projects").delete().eq("id", project.id);
+    setDeletingProject(false);
+    navigate("/dashboard/projects");
+  }
+
+  async function handleDeleteTask() {
+    if (!deleteTaskTarget) return;
+    setDeletingTask(true);
+    await supabase.from("tasks").delete().eq("id", deleteTaskTarget.id);
+    setDeletingTask(false);
+    setDeleteTaskOpen(false);
+    setDeleteTaskTarget(null);
+    fetchData();
+  }
+
+  async function toggleTaskComplete(task: Task) {
+    await supabase
+      .from("tasks")
+      .update({
+        completed_at: task.completed_at ? null : new Date().toISOString(),
+        status: task.completed_at ? "todo" : "done",
+      })
+      .eq("id", task.id);
+    fetchData();
+  }
 
   if (loading) {
     return (
@@ -126,17 +168,36 @@ export default function ProjectDetailPage() {
               )}
             </div>
           </div>
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              project.status === "active"
-                ? "bg-[var(--success)] text-white"
-                : project.status === "completed"
-                  ? "bg-muted-foreground text-white"
-                  : "bg-primary text-primary-foreground"
-            }`}
-          >
-            {project.status}
-          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditProjectOpen(true)}
+            >
+              <Pencil className="mr-1 h-4 w-4" />
+              Edit
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-red-500/50 text-red-500 hover:bg-red-500/10"
+              onClick={() => setDeleteProjectOpen(true)}
+            >
+              <Trash2 className="mr-1 h-4 w-4" />
+              Delete
+            </Button>
+            <span
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                project.status === "active"
+                  ? "bg-[var(--success)] text-white"
+                  : project.status === "completed"
+                    ? "bg-muted-foreground text-white"
+                    : "bg-primary text-primary-foreground"
+              }`}
+            >
+              {project.status}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -165,7 +226,14 @@ export default function ProjectDetailPage() {
             <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
               <CheckSquare className="h-5 w-5" /> Tasks
             </h2>
-            <Button size="sm" variant="outline">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setEditTask(null);
+                setTaskDialogOpen(true);
+              }}
+            >
               <Plus className="mr-1 h-4 w-4" /> Add
             </Button>
           </div>
@@ -178,13 +246,14 @@ export default function ProjectDetailPage() {
               {tasks.map((task) => (
                 <div
                   key={task.id}
-                  className="flex items-center gap-3 rounded-lg p-3 hover:bg-accent/50"
+                  className="group flex items-center gap-3 rounded-lg p-3 hover:bg-accent/50"
                 >
-                  <div
-                    className={`h-5 w-5 rounded border-2 ${
+                  <button
+                    onClick={() => toggleTaskComplete(task)}
+                    className={`h-5 w-5 shrink-0 rounded border-2 transition-colors ${
                       task.completed_at
                         ? "border-[var(--success)] bg-[var(--success)]"
-                        : "border-border"
+                        : "border-border hover:border-primary"
                     }`}
                   />
                   <span
@@ -196,6 +265,26 @@ export default function ProjectDetailPage() {
                   >
                     {task.title}
                   </span>
+                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      onClick={() => {
+                        setEditTask(task);
+                        setTaskDialogOpen(true);
+                      }}
+                      className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setDeleteTaskTarget(task);
+                        setDeleteTaskOpen(true);
+                      }}
+                      className="rounded-md p-1 text-muted-foreground hover:bg-red-500/10 hover:text-red-500"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
                   <span
                     className={`h-2 w-2 rounded-full ${
                       task.priority === "high"
@@ -213,7 +302,6 @@ export default function ProjectDetailPage() {
 
         {/* Sidebar: Milestones + Ideas */}
         <div className="space-y-6">
-          {/* Milestones */}
           <div className="rounded-xl border border-border bg-card p-5">
             <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-foreground">
               <Flag className="h-5 w-5" /> Milestones
@@ -253,7 +341,6 @@ export default function ProjectDetailPage() {
             )}
           </div>
 
-          {/* Ideas */}
           <div className="rounded-xl border border-border bg-card p-5">
             <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-foreground">
               <Lightbulb className="h-5 w-5" /> Ideas
@@ -277,6 +364,37 @@ export default function ProjectDetailPage() {
           </div>
         </div>
       </div>
+
+      <ProjectDialog
+        open={editProjectOpen}
+        onOpenChange={setEditProjectOpen}
+        project={project}
+        onSuccess={fetchData}
+      />
+
+      <DeleteDialog
+        open={deleteProjectOpen}
+        onOpenChange={setDeleteProjectOpen}
+        onConfirm={handleDeleteProject}
+        entityName="Project"
+        loading={deletingProject}
+      />
+
+      <TaskDialog
+        open={taskDialogOpen}
+        onOpenChange={setTaskDialogOpen}
+        task={editTask}
+        projectId={id}
+        onSuccess={fetchData}
+      />
+
+      <DeleteDialog
+        open={deleteTaskOpen}
+        onOpenChange={setDeleteTaskOpen}
+        onConfirm={handleDeleteTask}
+        entityName="Task"
+        loading={deletingTask}
+      />
     </div>
   );
 }

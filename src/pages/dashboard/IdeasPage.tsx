@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Plus,
   Search,
@@ -8,11 +8,15 @@ import {
   Image,
   Film,
   Star,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { Idea } from "@/types/database";
+import IdeaDialog from "@/components/dashboard/IdeaDialog";
+import DeleteDialog from "@/components/dashboard/DeleteDialog";
 
 const typeIcons: Record<string, typeof FileText> = {
   text: FileText,
@@ -28,22 +32,44 @@ export default function IdeasPage() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
 
-  useEffect(() => {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editIdea, setEditIdea] = useState<Idea | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Idea | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const fetchIdeas = useCallback(async () => {
     if (!session?.user.id) return;
-
-    async function fetchIdeas() {
-      const { data } = await supabase
-        .from("ideas")
-        .select("*")
-        .eq("owner_id", session!.user.id)
-        .order("created_at", { ascending: false });
-
-      setIdeas(data ?? []);
-      setLoading(false);
-    }
-
-    fetchIdeas();
+    const { data } = await supabase
+      .from("ideas")
+      .select("*")
+      .eq("owner_id", session.user.id)
+      .order("created_at", { ascending: false });
+    setIdeas(data ?? []);
+    setLoading(false);
   }, [session?.user.id]);
+
+  useEffect(() => {
+    fetchIdeas();
+  }, [fetchIdeas]);
+
+  async function toggleFavorite(idea: Idea) {
+    await supabase
+      .from("ideas")
+      .update({ is_favorite: !idea.is_favorite })
+      .eq("id", idea.id);
+    fetchIdeas();
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    await supabase.from("ideas").delete().eq("id", deleteTarget.id);
+    setDeleting(false);
+    setDeleteOpen(false);
+    setDeleteTarget(null);
+    fetchIdeas();
+  }
 
   const filtered = ideas.filter((idea) => {
     const matchesSearch = idea.title
@@ -70,7 +96,12 @@ export default function IdeasPage() {
             Capture and organize your creative ideas
           </p>
         </div>
-        <Button>
+        <Button
+          onClick={() => {
+            setEditIdea(null);
+            setDialogOpen(true);
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" />
           New Idea
         </Button>
@@ -118,7 +149,12 @@ export default function IdeasPage() {
               : "Capture your first idea — text, voice, image, or video."}
           </p>
           {!search && (
-            <Button>
+            <Button
+              onClick={() => {
+                setEditIdea(null);
+                setDialogOpen(true);
+              }}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Capture Idea
             </Button>
@@ -137,11 +173,34 @@ export default function IdeasPage() {
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--warning)]/10">
                     <Icon className="h-5 w-5 text-[var(--warning)]" />
                   </div>
-                  <button className="text-muted-foreground hover:text-[var(--warning)]">
-                    <Star
-                      className={`h-4 w-4 ${idea.is_favorite ? "fill-[var(--warning)] text-[var(--warning)]" : ""}`}
-                    />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setEditIdea(idea);
+                        setDialogOpen(true);
+                      }}
+                      className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setDeleteTarget(idea);
+                        setDeleteOpen(true);
+                      }}
+                      className="rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-500 group-hover:opacity-100"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => toggleFavorite(idea)}
+                      className="text-muted-foreground hover:text-[var(--warning)]"
+                    >
+                      <Star
+                        className={`h-4 w-4 ${idea.is_favorite ? "fill-[var(--warning)] text-[var(--warning)]" : ""}`}
+                      />
+                    </button>
+                  </div>
                 </div>
                 <h3 className="mb-1 text-base font-semibold text-foreground">
                   {idea.title}
@@ -169,6 +228,21 @@ export default function IdeasPage() {
           })}
         </div>
       )}
+
+      <IdeaDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        idea={editIdea}
+        onSuccess={fetchIdeas}
+      />
+
+      <DeleteDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        onConfirm={handleDelete}
+        entityName="Idea"
+        loading={deleting}
+      />
     </div>
   );
 }

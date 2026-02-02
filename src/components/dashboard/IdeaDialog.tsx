@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState, useRef } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
 import {
@@ -17,6 +17,7 @@ import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { Idea } from "@/types/database";
 import { toast } from "sonner";
+import { Upload, X, Loader2 } from "lucide-react";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -42,19 +43,27 @@ export default function IdeaDialog({
 }: IdeaDialogProps) {
   const { session } = useSession();
   const isEdit = !!idea;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const {
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { title: "", content: "", type: "text", tags: "" },
   });
 
+  const watchedType = useWatch({ control, name: "type" });
+  const showFileInput = ["voice", "image", "video"].includes(watchedType ?? "");
+
   useEffect(() => {
     if (open) {
+      setFile(null);
       reset(
         idea
           ? {
@@ -68,6 +77,32 @@ export default function IdeaDialog({
     }
   }, [open, idea, reset]);
 
+  async function uploadFile(userId: string): Promise<{
+    file_url: string;
+    file_type: string;
+    file_size_bytes: number;
+  } | null> {
+    if (!file) return null;
+    const path = `${userId}/${crypto.randomUUID()}-${file.name}`;
+    setUploading(true);
+    const { error } = await supabase.storage
+      .from("idea-files")
+      .upload(path, file);
+    setUploading(false);
+    if (error) {
+      toast.error("File upload failed");
+      return null;
+    }
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("idea-files").getPublicUrl(path);
+    return {
+      file_url: publicUrl,
+      file_type: file.type,
+      file_size_bytes: file.size,
+    };
+  }
+
   async function onSubmit(data: FormData) {
     if (!session?.user.id) return;
 
@@ -78,12 +113,19 @@ export default function IdeaDialog({
           .filter(Boolean)
       : null;
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       title: data.title,
       content: data.content || null,
       type: data.type || "text",
       tags,
     };
+
+    // Upload file if one was selected
+    if (file) {
+      const fileData = await uploadFile(session.user.id);
+      if (!fileData) return;
+      Object.assign(payload, fileData);
+    }
 
     if (isEdit && idea) {
       const { error } = await supabase.from("ideas").update(payload).eq("id", idea.id);
@@ -100,6 +142,12 @@ export default function IdeaDialog({
     onOpenChange(false);
     onSuccess();
   }
+
+  const acceptMap: Record<string, string> = {
+    voice: "audio/*",
+    image: "image/*",
+    video: "video/*",
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -130,6 +178,64 @@ export default function IdeaDialog({
               <option value="video">Video</option>
             </select>
           </div>
+
+          {/* File upload for non-text types */}
+          {showFileInput && (
+            <div>
+              <Label>File</Label>
+              {isEdit && idea?.file_url && !file && (
+                <p className="mb-2 text-xs text-muted-foreground">
+                  Current file:{" "}
+                  <a
+                    href={idea.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    {idea.file_url.split("/").pop()}
+                  </a>
+                </p>
+              )}
+              {file ? (
+                <div className="flex items-center gap-2 rounded-md border border-border bg-accent/30 px-3 py-2 text-sm">
+                  <span className="flex-1 truncate">{file.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {(file.size / 1024).toFixed(0)} KB
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border px-3 py-4 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                >
+                  <Upload className="h-4 w-4" />
+                  Choose file
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={acceptMap[watchedType ?? ""] ?? ""}
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) setFile(f);
+                }}
+              />
+            </div>
+          )}
+
           <div>
             <Label htmlFor="content">Content</Label>
             <Textarea
@@ -155,12 +261,19 @@ export default function IdeaDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting
-                ? "Saving..."
-                : isEdit
-                  ? "Save Changes"
-                  : "Capture Idea"}
+            <Button type="submit" disabled={isSubmitting || uploading}>
+              {uploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : isSubmitting ? (
+                "Saving..."
+              ) : isEdit ? (
+                "Save Changes"
+              ) : (
+                "Capture Idea"
+              )}
             </Button>
           </DialogFooter>
         </form>

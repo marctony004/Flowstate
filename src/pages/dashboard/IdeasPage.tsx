@@ -213,6 +213,40 @@ export default function IdeasPage() {
                     {idea.content}
                   </p>
                 )}
+                {idea.file_url && (
+                  <div className="mb-3">
+                    {idea.type === "image" ? (
+                      <a
+                        href={idea.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <img
+                          src={idea.file_url}
+                          alt={idea.title}
+                          className="h-28 w-full rounded-md object-cover"
+                        />
+                      </a>
+                    ) : (
+                      <a
+                        href={idea.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 rounded-md bg-accent/30 px-3 py-2 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        <span className="flex-1 truncate">
+                          {idea.file_url.split("/").pop()}
+                        </span>
+                        {idea.file_size_bytes && (
+                          <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px]">
+                            {(idea.file_size_bytes / 1024).toFixed(0)} KB
+                          </span>
+                        )}
+                      </a>
+                    )}
+                  </div>
+                )}
                 <div className="flex flex-wrap items-center gap-2">
                   {idea.tags?.map((tag) => (
                     <span

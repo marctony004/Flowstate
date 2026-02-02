@@ -8,11 +8,41 @@ import {
   Plus,
   ArrowRight,
   Clock,
+  FileText,
+  Mic,
+  Image,
+  Film,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { Project, Idea, Task, ActivityLog } from "@/types/database";
+
+const typeIcons: Record<string, typeof FileText> = {
+  text: FileText,
+  voice: Mic,
+  image: Image,
+  video: Film,
+};
+
+function formatActivity(item: ActivityLog): string {
+  const action = item.action.toLowerCase();
+  const entity = item.entity_type.toLowerCase();
+  const meta = item.metadata as Record<string, unknown> | null;
+  const name = meta?.title ?? meta?.name;
+
+  const verb =
+    action === "create"
+      ? "Created"
+      : action === "update"
+        ? "Updated"
+        : action === "delete"
+          ? "Deleted"
+          : item.action.charAt(0).toUpperCase() + item.action.slice(1);
+
+  const label = name ? `${entity} '${name}'` : entity;
+  return `${verb} ${label}`;
+}
 
 export default function DashboardHomePage() {
   const { session } = useSession();
@@ -20,6 +50,7 @@ export default function DashboardHomePage() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activity, setActivity] = useState<ActivityLog[]>([]);
+  const [collaboratorCount, setCollaboratorCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const userId = session?.user.id;
@@ -28,38 +59,44 @@ export default function DashboardHomePage() {
     if (!userId) return;
 
     async function fetchData() {
-      const [projectsRes, ideasRes, tasksRes, activityRes] = await Promise.all([
-        supabase
-          .from("projects")
-          .select("*")
-          .eq("owner_id", userId!)
-          .order("updated_at", { ascending: false })
-          .limit(5),
-        supabase
-          .from("ideas")
-          .select("*")
-          .eq("owner_id", userId!)
-          .order("created_at", { ascending: false })
-          .limit(5),
-        supabase
-          .from("tasks")
-          .select("*")
-          .eq("created_by", userId!)
-          .is("completed_at", null)
-          .order("created_at", { ascending: false })
-          .limit(5),
-        supabase
-          .from("activity_log")
-          .select("*")
-          .eq("user_id", userId!)
-          .order("created_at", { ascending: false })
-          .limit(10),
-      ]);
+      const [projectsRes, ideasRes, tasksRes, activityRes, collabRes] =
+        await Promise.all([
+          supabase
+            .from("projects")
+            .select("*")
+            .eq("owner_id", userId!)
+            .order("updated_at", { ascending: false })
+            .limit(5),
+          supabase
+            .from("ideas")
+            .select("*")
+            .eq("owner_id", userId!)
+            .order("created_at", { ascending: false })
+            .limit(5),
+          supabase
+            .from("tasks")
+            .select("*")
+            .eq("created_by", userId!)
+            .is("completed_at", null)
+            .order("created_at", { ascending: false })
+            .limit(5),
+          supabase
+            .from("activity_log")
+            .select("*")
+            .eq("user_id", userId!)
+            .order("created_at", { ascending: false })
+            .limit(10),
+          supabase
+            .from("collaborator_notes")
+            .select("id", { count: "exact", head: true })
+            .eq("collaborator_id", userId!),
+        ]);
 
       setProjects(projectsRes.data ?? []);
       setIdeas(ideasRes.data ?? []);
       setTasks(tasksRes.data ?? []);
       setActivity(activityRes.data ?? []);
+      setCollaboratorCount(collabRes.count ?? 0);
       setLoading(false);
     }
 
@@ -95,7 +132,7 @@ export default function DashboardHomePage() {
     },
     {
       label: "Collaborators",
-      value: 0,
+      value: collaboratorCount,
       icon: Users,
       href: "/dashboard/collaborators",
       color: "text-[var(--accent)]",
@@ -192,37 +229,80 @@ export default function DashboardHomePage() {
           )}
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Ideas */}
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">
-            Recent Activity
-          </h2>
-          {activity.length === 0 ? (
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">
+              Recent Ideas
+            </h2>
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/dashboard/ideas">
+                View all <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          {ideas.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              No activity yet. Start creating to see your activity here.
+              No ideas yet. Capture your first idea to get started.
             </p>
           ) : (
             <div className="space-y-3">
-              {activity.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-start gap-3 rounded-lg p-3"
-                >
-                  <Clock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-foreground">
-                      <span className="font-medium">{item.action}</span>{" "}
-                      {item.entity_type}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(item.created_at).toLocaleDateString()}
-                    </p>
+              {ideas.map((idea) => {
+                const IdeaIcon = typeIcons[idea.type] ?? FileText;
+                return (
+                  <div
+                    key={idea.id}
+                    className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-accent/50"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--warning)]/10">
+                      <IdeaIcon className="h-5 w-5 text-[var(--warning)]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {idea.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {idea.type} ·{" "}
+                        {new Date(idea.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <h2 className="mb-4 text-lg font-semibold text-foreground">
+          Recent Activity
+        </h2>
+        {activity.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            No activity yet. Start creating to see your activity here.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {activity.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-start gap-3 rounded-lg p-3"
+              >
+                <Clock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-foreground">
+                    {formatActivity(item)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(item.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Open Tasks */}

@@ -9,9 +9,9 @@ const HomePage = () => {
     <main className="flex min-h-screen flex-col items-center justify-center px-4">
       <section className="w-full max-w-md space-y-6 rounded-lg border border-border bg-card p-8 shadow-lg">
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-primary">
+          <Link to="/" className="text-3xl font-bold tracking-tight text-primary hover:underline">
             FlowState
-          </h1>
+          </Link>
           <p className="mt-1 text-sm text-muted-foreground">
             Your Creative Intelligence OS
           </p>

@@ -1,4 +1,5 @@
 import { createBrowserRouter } from "react-router-dom";
+import LandingPage from "../pages/LandingPage.tsx";
 import HomePage from "../pages/HomePage.tsx";
 import SignInPage from "../pages/auth/SignInPage.tsx";
 import SignUpPage from "../pages/auth/SignUpPage.tsx";
@@ -10,14 +11,18 @@ import AuthProtectedRoute from "./AuthProtectedRoute.tsx";
 import Providers from "../Providers.tsx";
 
 const router = createBrowserRouter([
-  // I recommend you reflect the routes here in the pages folder
+  // Landing page — no session provider needed
+  {
+    path: "/",
+    element: <LandingPage />,
+  },
+  // App routes wrapped with providers
   {
     path: "/",
     element: <Providers />,
     children: [
-      // Public routes
       {
-        path: "/",
+        path: "/app",
         element: <HomePage />,
       },
       {

@@ -15,6 +15,7 @@ import supabase from "@/supabase";
 import type { Project } from "@/types/database";
 import ProjectDialog from "@/components/dashboard/ProjectDialog";
 import DeleteDialog from "@/components/dashboard/DeleteDialog";
+import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
   active: "bg-[var(--success)] text-white",
@@ -62,10 +63,12 @@ export default function ProjectsPage() {
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-    await supabase.from("projects").delete().eq("id", deleteTarget.id);
+    const { error } = await supabase.from("projects").delete().eq("id", deleteTarget.id);
     setDeleting(false);
     setDeleteOpen(false);
     setDeleteTarget(null);
+    if (error) { toast.error("Failed to delete project"); return; }
+    toast.success("Project deleted");
     fetchProjects();
   }
 

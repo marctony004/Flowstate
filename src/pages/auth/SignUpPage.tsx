@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 
 const SignUpPage = () => {
   const { session } = useSession();
-  if (session) return <Navigate to="/" />;
+  if (session) return <Navigate to="/dashboard" />;
 
   const [status, setStatus] = useState("");
   const [formValues, setFormValues] = useState({

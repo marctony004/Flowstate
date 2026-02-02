@@ -6,6 +6,7 @@ import supabase from "@/supabase";
 import type { CollaboratorNote } from "@/types/database";
 import CollaboratorDialog from "@/components/dashboard/CollaboratorDialog";
 import DeleteDialog from "@/components/dashboard/DeleteDialog";
+import { toast } from "sonner";
 
 export default function CollaboratorsPage() {
   const { session } = useSession();
@@ -39,13 +40,15 @@ export default function CollaboratorsPage() {
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-    await supabase
+    const { error } = await supabase
       .from("collaborator_notes")
       .delete()
       .eq("id", deleteTarget.id);
     setDeleting(false);
     setDeleteOpen(false);
     setDeleteTarget(null);
+    if (error) { toast.error("Failed to delete collaborator"); return; }
+    toast.success("Collaborator deleted");
     fetchCollaborators();
   }
 

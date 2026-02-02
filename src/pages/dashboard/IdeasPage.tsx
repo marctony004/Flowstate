@@ -17,6 +17,7 @@ import supabase from "@/supabase";
 import type { Idea } from "@/types/database";
 import IdeaDialog from "@/components/dashboard/IdeaDialog";
 import DeleteDialog from "@/components/dashboard/DeleteDialog";
+import { toast } from "sonner";
 
 const typeIcons: Record<string, typeof FileText> = {
   text: FileText,
@@ -54,20 +55,22 @@ export default function IdeasPage() {
   }, [fetchIdeas]);
 
   async function toggleFavorite(idea: Idea) {
-    await supabase
+    const { error } = await supabase
       .from("ideas")
       .update({ is_favorite: !idea.is_favorite })
       .eq("id", idea.id);
-    fetchIdeas();
+    if (!error) fetchIdeas();
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-    await supabase.from("ideas").delete().eq("id", deleteTarget.id);
+    const { error } = await supabase.from("ideas").delete().eq("id", deleteTarget.id);
     setDeleting(false);
     setDeleteOpen(false);
     setDeleteTarget(null);
+    if (error) { toast.error("Failed to delete idea"); return; }
+    toast.success("Idea deleted");
     fetchIdeas();
   }
 

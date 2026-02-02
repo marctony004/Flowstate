@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { Project } from "@/types/database";
+import { toast } from "sonner";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -103,11 +104,15 @@ export default function ProjectDialog({
     };
 
     if (isEdit && project) {
-      await supabase.from("projects").update(payload).eq("id", project.id);
+      const { error } = await supabase.from("projects").update(payload).eq("id", project.id);
+      if (error) { toast.error("Failed to update project"); return; }
+      toast.success("Project updated");
     } else {
-      await supabase
+      const { error } = await supabase
         .from("projects")
         .insert({ ...payload, owner_id: session.user.id });
+      if (error) { toast.error("Failed to create project"); return; }
+      toast.success("Project created");
     }
 
     onOpenChange(false);

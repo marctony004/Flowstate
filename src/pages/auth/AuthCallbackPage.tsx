@@ -19,20 +19,35 @@ const AuthCallbackPage = () => {
           navigate("/dashboard", { replace: true });
         }
       });
-    } else if (window.location.hash) {
-      // Implicit flow — supabase-js auto-detects hash tokens via onAuthStateChange.
-      // Just wait briefly then redirect.
+    } else {
+      // Implicit flow or hash-based tokens — supabase-js auto-detects.
+      // Listen for the session to be established, then redirect.
       const {
         data: { subscription },
-      } = supabase.auth.onAuthStateChange((event) => {
-        if (event === "SIGNED_IN") {
+      } = supabase.auth.onAuthStateChange((event, session) => {
+        if (event === "SIGNED_IN" && session) {
           subscription.unsubscribe();
           navigate("/dashboard", { replace: true });
         }
       });
-      return () => subscription.unsubscribe();
-    } else {
-      setError("No authorization code found in URL.");
+
+      // Also check if already signed in (session may have been set before listener)
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) {
+          subscription.unsubscribe();
+          navigate("/dashboard", { replace: true });
+        }
+      });
+
+      // Timeout fallback — if nothing happens in 5s, show error
+      const timeout = setTimeout(() => {
+        setError("Authentication timed out. Please try signing in again.");
+      }, 5000);
+
+      return () => {
+        subscription.unsubscribe();
+        clearTimeout(timeout);
+      };
     }
   }, [searchParams, navigate]);
 

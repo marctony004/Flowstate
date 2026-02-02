@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { Idea } from "@/types/database";
+import { toast } from "sonner";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -85,11 +86,15 @@ export default function IdeaDialog({
     };
 
     if (isEdit && idea) {
-      await supabase.from("ideas").update(payload).eq("id", idea.id);
+      const { error } = await supabase.from("ideas").update(payload).eq("id", idea.id);
+      if (error) { toast.error("Failed to update idea"); return; }
+      toast.success("Idea updated");
     } else {
-      await supabase
+      const { error } = await supabase
         .from("ideas")
         .insert({ ...payload, owner_id: session.user.id });
+      if (error) { toast.error("Failed to capture idea"); return; }
+      toast.success("Idea captured");
     }
 
     onOpenChange(false);

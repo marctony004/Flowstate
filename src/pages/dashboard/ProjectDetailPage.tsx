@@ -18,6 +18,7 @@ import type { Project, Task, Idea, Milestone } from "@/types/database";
 import ProjectDialog from "@/components/dashboard/ProjectDialog";
 import TaskDialog from "@/components/dashboard/TaskDialog";
 import DeleteDialog from "@/components/dashboard/DeleteDialog";
+import { toast } from "sonner";
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -72,18 +73,22 @@ export default function ProjectDetailPage() {
   async function handleDeleteProject() {
     if (!project) return;
     setDeletingProject(true);
-    await supabase.from("projects").delete().eq("id", project.id);
+    const { error } = await supabase.from("projects").delete().eq("id", project.id);
     setDeletingProject(false);
+    if (error) { toast.error("Failed to delete project"); return; }
+    toast.success("Project deleted");
     navigate("/dashboard/projects");
   }
 
   async function handleDeleteTask() {
     if (!deleteTaskTarget) return;
     setDeletingTask(true);
-    await supabase.from("tasks").delete().eq("id", deleteTaskTarget.id);
+    const { error } = await supabase.from("tasks").delete().eq("id", deleteTaskTarget.id);
     setDeletingTask(false);
     setDeleteTaskOpen(false);
     setDeleteTaskTarget(null);
+    if (error) { toast.error("Failed to delete task"); return; }
+    toast.success("Task deleted");
     fetchData();
   }
 

@@ -6,6 +6,7 @@ import supabase from "@/supabase";
 import type { Task } from "@/types/database";
 import TaskDialog from "@/components/dashboard/TaskDialog";
 import DeleteDialog from "@/components/dashboard/DeleteDialog";
+import { toast } from "sonner";
 
 const columns = [
   { key: "todo", label: "To Do" },
@@ -50,10 +51,12 @@ export default function TasksPage() {
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-    await supabase.from("tasks").delete().eq("id", deleteTarget.id);
+    const { error } = await supabase.from("tasks").delete().eq("id", deleteTarget.id);
     setDeleting(false);
     setDeleteOpen(false);
     setDeleteTarget(null);
+    if (error) { toast.error("Failed to delete task"); return; }
+    toast.success("Task deleted");
     fetchTasks();
   }
 

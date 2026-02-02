@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { Task } from "@/types/database";
+import { toast } from "sonner";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -99,13 +100,17 @@ export default function TaskDialog({
     };
 
     if (isEdit && task) {
-      await supabase.from("tasks").update(payload).eq("id", task.id);
+      const { error } = await supabase.from("tasks").update(payload).eq("id", task.id);
+      if (error) { toast.error("Failed to update task"); return; }
+      toast.success("Task updated");
     } else {
-      await supabase.from("tasks").insert({
+      const { error } = await supabase.from("tasks").insert({
         ...payload,
         project_id: data.project_id || projectId!,
         created_by: session.user.id,
       });
+      if (error) { toast.error("Failed to create task"); return; }
+      toast.success("Task created");
     }
 
     onOpenChange(false);

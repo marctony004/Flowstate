@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { Profile } from "@/types/database";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const { session } = useSession();
@@ -46,7 +47,7 @@ export default function SettingsPage() {
     if (!session?.user.id) return;
     setSaving(true);
 
-    await supabase
+    const { error } = await supabase
       .from("profiles")
       .update({
         display_name: form.display_name,
@@ -57,6 +58,8 @@ export default function SettingsPage() {
       .eq("id", session.user.id);
 
     setSaving(false);
+    if (error) { toast.error("Failed to save profile"); return; }
+    toast.success("Profile saved");
   }
 
   if (loading) {

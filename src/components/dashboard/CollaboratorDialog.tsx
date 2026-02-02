@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { CollaboratorNote } from "@/types/database";
+import { toast } from "sonner";
 
 const schema = z.object({
   collaborator_id: z.string().min(1, "Collaborator ID is required"),
@@ -97,16 +98,20 @@ export default function CollaboratorDialog({
     };
 
     if (isEdit && collaborator) {
-      await supabase
+      const { error } = await supabase
         .from("collaborator_notes")
         .update(payload)
         .eq("id", collaborator.id);
+      if (error) { toast.error("Failed to update collaborator"); return; }
+      toast.success("Collaborator updated");
     } else {
-      await supabase.from("collaborator_notes").insert({
+      const { error } = await supabase.from("collaborator_notes").insert({
         ...payload,
         collaborator_id: data.collaborator_id,
         owner_id: session.user.id,
       });
+      if (error) { toast.error("Failed to add collaborator"); return; }
+      toast.success("Collaborator added");
     }
 
     onOpenChange(false);

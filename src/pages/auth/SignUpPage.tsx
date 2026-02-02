@@ -64,6 +64,19 @@ const SignUpPage = () => {
           placeholder="Password"
         />
         <button type="submit">Create Account</button>
+        <button
+          type="button"
+          onClick={() =>
+            supabase.auth.signInWithOAuth({
+              provider: "google",
+              options: {
+                redirectTo: `${window.location.origin}/auth/callback`,
+              },
+            })
+          }
+        >
+          Sign up with Google
+        </button>
         <Link className="auth-link" to="/auth/sign-in">
           Already have an account? Sign In
         </Link>

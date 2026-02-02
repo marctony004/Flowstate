@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import StarBorder from "@/components/reactbits/StarBorder";
 
 export default function FinalCTASection() {
   return (
@@ -22,14 +23,24 @@ export default function FinalCTASection() {
           Join 2,000+ creators who stopped fighting disorganization and started
           finishing projects. Your 14-day free trial is waiting.
         </p>
-        <Button
-          size="lg"
-          variant="secondary"
-          className="mt-8"
-          asChild
-        >
-          <Link to="/auth/sign-up">Start Free Trial</Link>
-        </Button>
+        <div className="mt-8 flex justify-center">
+          <StarBorder
+            as="div"
+            color="#00BCD4"
+            speed="5s"
+            thickness={2}
+            className="rounded-xl"
+          >
+            <Button
+              size="lg"
+              variant="secondary"
+              asChild
+              className="rounded-[18px]"
+            >
+              <Link to="/auth/sign-up">Start Free Trial</Link>
+            </Button>
+          </StarBorder>
+        </div>
         <p className="mt-4 text-sm text-primary-foreground/60">
           Free &middot; No credit card required &middot; Cancel anytime
         </p>

@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import GradientText from "@/components/reactbits/GradientText";
 
 const tiers = [
   {
@@ -76,7 +77,9 @@ export default function PricingSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Simple, Transparent Pricing
+            <GradientText colors={["#3F51B5", "#00BCD4", "#3F51B5"]} animationSpeed={5}>
+              Simple, Transparent Pricing
+            </GradientText>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
             Start free for 14 days. No credit card required.
@@ -111,10 +114,10 @@ export default function PricingSection() {
               whileInView="visible"
               viewport={{ once: true, margin: "-50px" }}
               variants={fadeUp}
-              className={`relative rounded-2xl border p-8 ${
+              className={`relative rounded-2xl border p-8 backdrop-blur-md ${
                 tier.highlighted
-                  ? "scale-[1.02] border-primary bg-card shadow-xl"
-                  : "border-border/50 bg-card shadow-sm"
+                  ? "scale-[1.02] border-primary bg-card/80 shadow-xl"
+                  : "border-border/50 bg-card/60 shadow-sm"
               }`}
             >
               {tier.highlighted && (

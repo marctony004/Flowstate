@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Lightbulb, Users, CheckCircle } from "lucide-react";
 import GlareHover from "@/components/reactbits/GlareHover";
+import GradientText from "@/components/reactbits/GradientText";
 
 const benefits = [
   {
@@ -44,7 +45,9 @@ export default function BenefitsSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Everything You Need to Stay in Flow
+            <GradientText colors={["#3F51B5", "#00BCD4", "#3F51B5"]} animationSpeed={5}>
+              Everything You Need to Stay in Flow
+            </GradientText>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
             Three core capabilities that transform how creative professionals

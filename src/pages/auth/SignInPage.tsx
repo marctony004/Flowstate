@@ -2,16 +2,13 @@ import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useSession } from "../../context/SessionContext";
 import supabase from "../../supabase";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const SignInPage = () => {
-  // ==============================
-  // If user is already logged in, redirect to home
-  // This logic is being repeated in SignIn and SignUp..
   const { session } = useSession();
   if (session) return <Navigate to="/" />;
-  // maybe we can create a wrapper component for these pages
-  // just like the ./router/AuthProtectedRoute.tsx? up to you.
-  // ==============================
+
   const [status, setStatus] = useState("");
   const [formValues, setFormValues] = useState({
     email: "",
@@ -34,43 +31,61 @@ const SignInPage = () => {
     }
     setStatus("");
   };
+
   return (
-    <main>
-      <Link className="home-link" to="/">
-        ◄ Home
-      </Link>
-      <form className="main-container" onSubmit={handleSubmit}>
-        <h1 className="header-text">Sign In</h1>
-        <input
-          name="email"
-          onChange={handleInputChange}
-          type="email"
-          placeholder="Email"
-        />
-        <input
-          name="password"
-          onChange={handleInputChange}
-          type="password"
-          placeholder="Password"
-        />
-        <button type="submit">Login</button>
-        <button
-          type="button"
-          onClick={() =>
-            supabase.auth.signInWithOAuth({
-              provider: "google",
-              options: {
-                redirectTo: `${window.location.origin}/auth/callback`,
-              },
-            })
-          }
-        >
-          Sign in with Google
-        </button>
-        <Link className="auth-link" to="/auth/sign-up">
-          Don't have an account? Sign Up
-        </Link>
-        {status && <p>{status}</p>}
+    <main className="flex min-h-screen flex-col items-center justify-center px-4">
+      <Button variant="ghost" asChild className="mb-4 self-start sm:self-center">
+        <Link to="/">&#9664; Home</Link>
+      </Button>
+      <form
+        className="w-full max-w-md space-y-4 rounded-lg border border-border bg-card p-8 shadow-lg"
+        onSubmit={handleSubmit}
+      >
+        <h1 className="text-center text-2xl font-bold tracking-tight text-primary">
+          Sign In
+        </h1>
+        <div className="space-y-3">
+          <Input
+            name="email"
+            onChange={handleInputChange}
+            type="email"
+            placeholder="Email"
+          />
+          <Input
+            name="password"
+            onChange={handleInputChange}
+            type="password"
+            placeholder="Password"
+          />
+        </div>
+        <div className="flex flex-col gap-3">
+          <Button type="submit">Login</Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: {
+                  redirectTo: `${window.location.origin}/auth/callback`,
+                },
+              })
+            }
+          >
+            Sign in with Google
+          </Button>
+        </div>
+        <p className="text-center text-sm">
+          <Link
+            className="text-primary underline-offset-4 hover:underline"
+            to="/auth/sign-up"
+          >
+            Don't have an account? Sign Up
+          </Link>
+        </p>
+        {status && (
+          <p className="text-center text-sm text-muted-foreground">{status}</p>
+        )}
       </form>
     </main>
   );

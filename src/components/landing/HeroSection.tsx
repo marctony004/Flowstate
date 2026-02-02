@@ -7,7 +7,7 @@ import Aurora from "@/components/reactbits/Aurora";
 
 export default function HeroSection() {
   return (
-    <section className="relative overflow-hidden py-20 sm:py-28 lg:py-36">
+    <section className="relative overflow-hidden pt-28 pb-20 sm:pt-36 sm:pb-28 lg:pt-44 lg:pb-36">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           {/* Left: Copy */}

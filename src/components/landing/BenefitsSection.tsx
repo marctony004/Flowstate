@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Lightbulb, Users, CheckCircle } from "lucide-react";
+import GlareHover from "@/components/reactbits/GlareHover";
 
 const benefits = [
   {
@@ -60,19 +61,32 @@ export default function BenefitsSection() {
               whileInView="visible"
               viewport={{ once: true, margin: "-50px" }}
               variants={fadeUp}
-              className="rounded-2xl border border-border/50 bg-card p-8 shadow-sm transition-shadow hover:shadow-md"
             >
-              <div
-                className={`mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl ${b.bg}`}
+              <GlareHover
+                width="100%"
+                height="100%"
+                background="transparent"
+                borderRadius="1rem"
+                borderColor="hsl(var(--border) / 0.5)"
+                glareColor="#3F51B5"
+                glareOpacity={0.15}
+                className="!shadow-sm transition-shadow hover:!shadow-md"
+                style={{ border: "1px solid hsl(var(--border) / 0.5)" }}
               >
-                <b.icon className={`h-6 w-6 ${b.color}`} />
-              </div>
-              <h3 className="text-xl font-semibold text-foreground">
-                {b.title}
-              </h3>
-              <p className="mt-3 leading-relaxed text-muted-foreground">
-                {b.description}
-              </p>
+                <div className="p-8">
+                  <div
+                    className={`mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl ${b.bg}`}
+                  >
+                    <b.icon className={`h-6 w-6 ${b.color}`} />
+                  </div>
+                  <h3 className="text-xl font-semibold text-foreground">
+                    {b.title}
+                  </h3>
+                  <p className="mt-3 leading-relaxed text-muted-foreground">
+                    {b.description}
+                  </p>
+                </div>
+              </GlareHover>
             </motion.div>
           ))}
         </div>

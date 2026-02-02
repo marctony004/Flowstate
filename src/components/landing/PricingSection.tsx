@@ -1,13 +1,16 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 
 const tiers = [
   {
     name: "Starter",
-    price: "$9",
+    monthlyPrice: "$9",
+    annualPrice: "$7",
     period: "/month",
     description: "For solo creators getting organized.",
     features: [
@@ -22,7 +25,8 @@ const tiers = [
   },
   {
     name: "Professional",
-    price: "$29",
+    monthlyPrice: "$29",
+    annualPrice: "$24",
     period: "/month",
     description: "For serious creators and small teams.",
     features: [
@@ -38,7 +42,8 @@ const tiers = [
   },
   {
     name: "Enterprise",
-    price: "Custom",
+    monthlyPrice: "Custom",
+    annualPrice: "Custom",
     period: "",
     description: "For labels, studios, and large teams.",
     features: [
@@ -64,6 +69,8 @@ const fadeUp = {
 };
 
 export default function PricingSection() {
+  const [annual, setAnnual] = useState(false);
+
   return (
     <section id="pricing" className="py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -74,6 +81,25 @@ export default function PricingSection() {
           <p className="mt-4 text-lg text-muted-foreground">
             Start free for 14 days. No credit card required.
           </p>
+
+          <div className="mt-6 flex items-center justify-center gap-3">
+            <span
+              className={`text-sm font-medium ${!annual ? "text-foreground" : "text-muted-foreground"}`}
+            >
+              Monthly
+            </span>
+            <Switch checked={annual} onCheckedChange={setAnnual} />
+            <span
+              className={`text-sm font-medium ${annual ? "text-foreground" : "text-muted-foreground"}`}
+            >
+              Annual
+            </span>
+            {annual && (
+              <Badge variant="secondary" className="text-xs font-medium text-[var(--success)]">
+                Save 20%
+              </Badge>
+            )}
+          </div>
         </div>
 
         <div className="mt-16 grid gap-8 lg:grid-cols-3">
@@ -106,9 +132,12 @@ export default function PricingSection() {
               </div>
               <div className="mb-6">
                 <span className="text-4xl font-bold text-foreground">
-                  {tier.price}
+                  {annual ? tier.annualPrice : tier.monthlyPrice}
                 </span>
-                <span className="text-muted-foreground">{tier.period}</span>
+                <span className="text-muted-foreground">
+                  {tier.period}
+                  {annual && tier.period ? " (billed annually)" : ""}
+                </span>
               </div>
               <ul className="mb-8 space-y-3">
                 {tier.features.map((f) => (

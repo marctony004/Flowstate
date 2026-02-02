@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import BlurText from "@/components/reactbits/BlurText";
+import Aurora from "@/components/reactbits/Aurora";
 
 export default function HeroSection() {
   return (
@@ -22,10 +24,13 @@ export default function HeroSection() {
               Trusted by 2,000+ Independent Musicians & Producers
             </Badge>
 
-            <h1 className="text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              Transform Creative Chaos Into{" "}
-              <span className="text-primary">Unstoppable Momentum</span>
-            </h1>
+            <BlurText
+              text="Transform Creative Chaos Into Unstoppable Momentum"
+              className="text-4xl font-bold leading-tight tracking-tight text-foreground sm:text-5xl lg:text-6xl"
+              delay={100}
+              animateBy="words"
+              direction="bottom"
+            />
 
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
               FlowState is the creative intelligence platform that helps
@@ -64,6 +69,14 @@ export default function HeroSection() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="relative mx-auto w-full max-w-lg lg:mx-0"
           >
+            <div className="absolute inset-0 -z-10 overflow-hidden rounded-2xl opacity-60">
+              <Aurora
+                colorStops={["#3F51B5", "#00BCD4", "#3F51B5"]}
+                amplitude={1.2}
+                blend={0.6}
+                speed={0.5}
+              />
+            </div>
             <div className="aspect-[4/3] overflow-hidden rounded-2xl border border-border/50 bg-gradient-to-br from-primary/10 via-accent/10 to-success/10 p-8 shadow-2xl">
               <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
                 <div className="flex gap-3">

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Menu } from "lucide-react";
+import { Menu, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -24,8 +24,30 @@ function scrollToSection(href: string) {
   }
 }
 
+function useDarkMode() {
+  const [dark, setDark] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const stored = localStorage.getItem("theme");
+    if (stored) return stored === "dark";
+    return true;
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (dark) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    localStorage.setItem("theme", dark ? "dark" : "light");
+  }, [dark]);
+
+  return [dark, () => setDark((d) => !d)] as const;
+}
+
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [dark, toggleDark] = useDarkMode();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
@@ -55,6 +77,14 @@ export default function Navbar() {
 
         {/* Desktop CTA */}
         <div className="hidden items-center gap-3 md:flex">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleDark}
+            aria-label="Toggle dark mode"
+          >
+            {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
           <Button variant="ghost" asChild>
             <Link to="/auth/sign-in">Log In</Link>
           </Button>
@@ -88,6 +118,10 @@ export default function Navbar() {
                 ))}
               </div>
               <div className="flex flex-col gap-3 border-t border-border pt-4">
+                <Button variant="outline" onClick={toggleDark}>
+                  {dark ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+                  {dark ? "Light Mode" : "Dark Mode"}
+                </Button>
                 <Button variant="outline" asChild>
                   <Link to="/auth/sign-in" onClick={() => setOpen(false)}>
                     Log In

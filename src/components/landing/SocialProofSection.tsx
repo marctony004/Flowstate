@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
+import CountUp from "@/components/reactbits/CountUp";
 
 const testimonials = [
   {
@@ -28,13 +29,6 @@ const testimonials = [
   },
 ];
 
-const metrics = [
-  { value: "2,000+", label: "Creators" },
-  { value: "50,000+", label: "Projects" },
-  { value: "94%", label: "Retention" },
-  { value: "4.9/5", label: "Rating" },
-];
-
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
   visible: (i: number) => ({
@@ -60,16 +54,30 @@ export default function SocialProofSection() {
 
         {/* Metrics */}
         <div className="mt-12 grid grid-cols-2 gap-6 sm:grid-cols-4">
-          {metrics.map((m) => (
-            <div key={m.label} className="text-center">
-              <div className="text-3xl font-bold text-primary sm:text-4xl">
-                {m.value}
-              </div>
-              <div className="mt-1 text-sm text-muted-foreground">
-                {m.label}
-              </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-primary sm:text-4xl">
+              <CountUp to={2000} separator="," />+
             </div>
-          ))}
+            <div className="mt-1 text-sm text-muted-foreground">Creators</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-primary sm:text-4xl">
+              <CountUp to={50000} separator="," />+
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">Projects</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-primary sm:text-4xl">
+              <CountUp to={94} />%
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">Retention</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-primary sm:text-4xl">
+              <CountUp to={4.9} />/5
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">Rating</div>
+          </div>
         </div>
 
         {/* Testimonials */}

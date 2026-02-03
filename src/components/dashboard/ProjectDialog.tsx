@@ -17,6 +17,7 @@ import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { Project } from "@/types/database";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activityLogger";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -69,23 +70,23 @@ export default function ProjectDialog({
       reset(
         project
           ? {
-              title: project.title,
-              description: project.description ?? "",
-              genre: project.genre ?? "",
-              bpm: project.bpm?.toString() ?? "",
-              key_signature: project.key_signature ?? "",
-              due_date: project.due_date ?? "",
-              status: project.status,
-            }
+            title: project.title,
+            description: project.description ?? "",
+            genre: project.genre ?? "",
+            bpm: project.bpm?.toString() ?? "",
+            key_signature: project.key_signature ?? "",
+            due_date: project.due_date ?? "",
+            status: project.status,
+          }
           : {
-              title: "",
-              description: "",
-              genre: "",
-              bpm: "",
-              key_signature: "",
-              due_date: "",
-              status: "active",
-            }
+            title: "",
+            description: "",
+            genre: "",
+            bpm: "",
+            key_signature: "",
+            due_date: "",
+            status: "active",
+          }
       );
     }
   }, [open, project, reset]);
@@ -107,12 +108,28 @@ export default function ProjectDialog({
       const { error } = await supabase.from("projects").update(payload).eq("id", project.id);
       if (error) { toast.error("Failed to update project"); return; }
       toast.success("Project updated");
+      logActivity({
+        userId: session.user.id,
+        action: "update",
+        entityType: "project",
+        entityId: project.id,
+        metadata: { title: data.title },
+      });
     } else {
-      const { error } = await supabase
+      const { data: newProject, error } = await supabase
         .from("projects")
-        .insert({ ...payload, owner_id: session.user.id });
+        .insert({ ...payload, owner_id: session.user.id })
+        .select("id")
+        .single();
       if (error) { toast.error("Failed to create project"); return; }
       toast.success("Project created");
+      logActivity({
+        userId: session.user.id,
+        action: "create",
+        entityType: "project",
+        entityId: newProject?.id,
+        metadata: { title: data.title },
+      });
     }
 
     onOpenChange(false);

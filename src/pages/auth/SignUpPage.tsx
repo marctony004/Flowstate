@@ -7,13 +7,13 @@ import { Input } from "@/components/ui/input";
 
 const SignUpPage = () => {
   const { session } = useSession();
-  if (session) return <Navigate to="/dashboard" />;
-
   const [status, setStatus] = useState("");
   const [formValues, setFormValues] = useState({
     email: "",
     password: "",
   });
+
+  if (session) return <Navigate to="/dashboard" />;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormValues({ ...formValues, [e.target.name]: e.target.value });

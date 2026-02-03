@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Twitter, Instagram, Linkedin, Youtube } from "lucide-react";
 
 const columns = [
   {
@@ -65,6 +66,45 @@ export default function Footer() {
               Your Creative Intelligence OS. Transform creative chaos into
               unstoppable momentum.
             </p>
+            {/* Social Media Icons */}
+            <div className="mt-4 flex items-center gap-3">
+              <a
+                href="https://twitter.com/flowstate"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow us on Twitter"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Twitter className="h-5 w-5" />
+              </a>
+              <a
+                href="https://instagram.com/flowstate"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow us on Instagram"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Instagram className="h-5 w-5" />
+              </a>
+              <a
+                href="https://linkedin.com/company/flowstate"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow us on LinkedIn"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Linkedin className="h-5 w-5" />
+              </a>
+              <a
+                href="https://youtube.com/@flowstate"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Subscribe on YouTube"
+                className="text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Youtube className="h-5 w-5" />
+              </a>
+            </div>
           </div>
 
           {/* Link columns */}

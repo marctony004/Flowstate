@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
@@ -17,9 +17,12 @@ import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { CollaboratorNote } from "@/types/database";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activityLogger";
 
 const schema = z.object({
-  collaborator_id: z.string().min(1, "Collaborator ID is required"),
+  collaborator_email: z.string().email("Valid email is required"),
+  project_id: z.string().optional(),
+  task_id: z.string().optional(),
   strengths: z.string().optional(),
   working_style: z.string().optional(),
   communication_pref: z.string().optional(),
@@ -44,6 +47,24 @@ export default function CollaboratorDialog({
 }: CollaboratorDialogProps) {
   const { session } = useSession();
   const isEdit = !!collaborator;
+  const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
+  const [tasks, setTasks] = useState<{ id: string; title: string }[]>([]);
+
+  useEffect(() => {
+    if (!session?.user.id || !open) return;
+    supabase
+      .from("projects")
+      .select("id, title")
+      .eq("owner_id", session.user.id)
+      .order("title")
+      .then(({ data }) => setProjects(data ?? []));
+    supabase
+      .from("tasks")
+      .select("id, title")
+      .eq("created_by", session.user.id)
+      .order("title")
+      .then(({ data }) => setTasks(data ?? []));
+  }, [open, session?.user.id]);
 
   const {
     register,
@@ -53,7 +74,9 @@ export default function CollaboratorDialog({
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      collaborator_id: "",
+      collaborator_email: "",
+      project_id: "",
+      task_id: "",
       strengths: "",
       working_style: "",
       communication_pref: "",
@@ -67,21 +90,25 @@ export default function CollaboratorDialog({
       reset(
         collaborator
           ? {
-              collaborator_id: collaborator.collaborator_id,
-              strengths: collaborator.strengths ?? "",
-              working_style: collaborator.working_style ?? "",
-              communication_pref: collaborator.communication_pref ?? "",
-              rating: collaborator.rating?.toString() ?? "",
-              notes: collaborator.notes ?? "",
-            }
+            collaborator_email: "",
+            project_id: collaborator.project_id ?? "",
+            task_id: collaborator.task_id ?? "",
+            strengths: collaborator.strengths ?? "",
+            working_style: collaborator.working_style ?? "",
+            communication_pref: collaborator.communication_pref ?? "",
+            rating: collaborator.rating?.toString() ?? "",
+            notes: collaborator.notes ?? "",
+          }
           : {
-              collaborator_id: "",
-              strengths: "",
-              working_style: "",
-              communication_pref: "",
-              rating: "",
-              notes: "",
-            }
+            collaborator_email: "",
+            project_id: "",
+            task_id: "",
+            strengths: "",
+            working_style: "",
+            communication_pref: "",
+            rating: "",
+            notes: "",
+          }
       );
     }
   }, [open, collaborator, reset]);
@@ -90,6 +117,8 @@ export default function CollaboratorDialog({
     if (!session?.user.id) return;
 
     const payload = {
+      project_id: data.project_id || null,
+      task_id: data.task_id || null,
       strengths: data.strengths || null,
       working_style: data.working_style || null,
       communication_pref: data.communication_pref || null,
@@ -104,14 +133,37 @@ export default function CollaboratorDialog({
         .eq("id", collaborator.id);
       if (error) { toast.error("Failed to update collaborator"); return; }
       toast.success("Collaborator updated");
-    } else {
-      const { error } = await supabase.from("collaborator_notes").insert({
-        ...payload,
-        collaborator_id: data.collaborator_id,
-        owner_id: session.user.id,
+      logActivity({
+        userId: session.user.id,
+        action: "update",
+        entityType: "collaborator",
+        entityId: collaborator.id,
+        metadata: { collaborator_id: collaborator.collaborator_id },
       });
+    } else {
+      // Look up the collaborator's user ID by email
+      const { data: userId, error: lookupError } = await supabase
+        .rpc("get_user_id_by_email", { email_input: data.collaborator_email });
+
+      if (lookupError || !userId) {
+        toast.error("No user found with that email");
+        return;
+      }
+
+      const { data: newCollab, error } = await supabase.from("collaborator_notes").insert({
+        ...payload,
+        collaborator_id: userId,
+        owner_id: session.user.id,
+      }).select("id").single();
       if (error) { toast.error("Failed to add collaborator"); return; }
       toast.success("Collaborator added");
+      logActivity({
+        userId: session.user.id,
+        action: "create",
+        entityType: "collaborator",
+        entityId: newCollab?.id,
+        metadata: { collaborator_email: data.collaborator_email },
+      });
     }
 
     onOpenChange(false);
@@ -128,19 +180,49 @@ export default function CollaboratorDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <Label htmlFor="collaborator_id">
-              Collaborator Email / ID *
+            <Label htmlFor="collaborator_email">
+              Collaborator Email *
             </Label>
             <Input
-              id="collaborator_id"
-              {...register("collaborator_id")}
+              id="collaborator_email"
+              type="email"
+              placeholder="user@example.com"
+              {...register("collaborator_email")}
               disabled={isEdit}
             />
-            {errors.collaborator_id && (
+            {errors.collaborator_email && (
               <p className="mt-1 text-xs text-red-500">
-                {errors.collaborator_id.message}
+                {errors.collaborator_email.message}
               </p>
             )}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="project_id">Project</Label>
+              <select
+                id="project_id"
+                {...register("project_id")}
+                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none"
+              >
+                <option value="">None</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.title}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor="task_id">Task</Label>
+              <select
+                id="task_id"
+                {...register("task_id")}
+                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none"
+              >
+                <option value="">None</option>
+                {tasks.map((t) => (
+                  <option key={t.id} value={t.id}>{t.title}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>

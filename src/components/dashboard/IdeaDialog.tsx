@@ -18,6 +18,7 @@ import supabase from "@/supabase";
 import type { Idea } from "@/types/database";
 import { toast } from "sonner";
 import { Upload, X, Loader2 } from "lucide-react";
+import { logActivity } from "@/lib/activityLogger";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -67,11 +68,11 @@ export default function IdeaDialog({
       reset(
         idea
           ? {
-              title: idea.title,
-              content: idea.content ?? "",
-              type: idea.type,
-              tags: idea.tags?.join(", ") ?? "",
-            }
+            title: idea.title,
+            content: idea.content ?? "",
+            type: idea.type,
+            tags: idea.tags?.join(", ") ?? "",
+          }
           : { title: "", content: "", type: "text", tags: "" }
       );
     }
@@ -108,9 +109,9 @@ export default function IdeaDialog({
 
     const tags = data.tags
       ? data.tags
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean)
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean)
       : null;
 
     const payload: Record<string, unknown> = {
@@ -131,12 +132,28 @@ export default function IdeaDialog({
       const { error } = await supabase.from("ideas").update(payload).eq("id", idea.id);
       if (error) { toast.error("Failed to update idea"); return; }
       toast.success("Idea updated");
+      logActivity({
+        userId: session.user.id,
+        action: "update",
+        entityType: "idea",
+        entityId: idea.id,
+        metadata: { title: data.title },
+      });
     } else {
-      const { error } = await supabase
+      const { data: newIdea, error } = await supabase
         .from("ideas")
-        .insert({ ...payload, owner_id: session.user.id });
+        .insert({ ...payload, owner_id: session.user.id })
+        .select("id")
+        .single();
       if (error) { toast.error("Failed to capture idea"); return; }
       toast.success("Idea captured");
+      logActivity({
+        userId: session.user.id,
+        action: "create",
+        entityType: "idea",
+        entityId: newIdea?.id,
+        metadata: { title: data.title },
+      });
     }
 
     onOpenChange(false);

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
@@ -17,6 +17,7 @@ import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { Task } from "@/types/database";
 import { toast } from "sonner";
+import { logActivity } from "@/lib/activityLogger";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -24,7 +25,7 @@ const schema = z.object({
   status: z.string().optional(),
   priority: z.string().optional(),
   due_date: z.string().optional(),
-  project_id: z.string().optional(),
+  project_id: z.string().min(1, "Project is required"),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -46,6 +47,18 @@ export default function TaskDialog({
 }: TaskDialogProps) {
   const { session } = useSession();
   const isEdit = !!task;
+  const needsProjectPicker = !projectId && !isEdit;
+  const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
+
+  useEffect(() => {
+    if (!needsProjectPicker || !session?.user.id) return;
+    supabase
+      .from("projects")
+      .select("id, title")
+      .eq("owner_id", session.user.id)
+      .order("title")
+      .then(({ data }) => setProjects(data ?? []));
+  }, [needsProjectPicker, session?.user.id]);
 
   const {
     register,
@@ -69,21 +82,21 @@ export default function TaskDialog({
       reset(
         task
           ? {
-              title: task.title,
-              description: task.description ?? "",
-              status: task.status,
-              priority: task.priority,
-              due_date: task.due_date ?? "",
-              project_id: task.project_id,
-            }
+            title: task.title,
+            description: task.description ?? "",
+            status: task.status,
+            priority: task.priority,
+            due_date: task.due_date ?? "",
+            project_id: task.project_id,
+          }
           : {
-              title: "",
-              description: "",
-              status: "todo",
-              priority: "medium",
-              due_date: "",
-              project_id: projectId ?? "",
-            }
+            title: "",
+            description: "",
+            status: "todo",
+            priority: "medium",
+            due_date: "",
+            project_id: projectId ?? "",
+          }
       );
     }
   }, [open, task, projectId, reset]);
@@ -103,14 +116,31 @@ export default function TaskDialog({
       const { error } = await supabase.from("tasks").update(payload).eq("id", task.id);
       if (error) { toast.error("Failed to update task"); return; }
       toast.success("Task updated");
-    } else {
-      const { error } = await supabase.from("tasks").insert({
-        ...payload,
-        project_id: data.project_id || projectId!,
-        created_by: session.user.id,
+      logActivity({
+        userId: session.user.id,
+        action: "update",
+        entityType: "task",
+        entityId: task.id,
+        projectId: task.project_id,
+        metadata: { title: data.title },
       });
+    } else {
+      const projectIdToUse = data.project_id || projectId!;
+      const { data: newTask, error } = await supabase.from("tasks").insert({
+        ...payload,
+        project_id: projectIdToUse,
+        created_by: session.user.id,
+      }).select("id").single();
       if (error) { toast.error("Failed to create task"); return; }
       toast.success("Task created");
+      logActivity({
+        userId: session.user.id,
+        action: "create",
+        entityType: "task",
+        entityId: newTask?.id,
+        projectId: projectIdToUse,
+        metadata: { title: data.title },
+      });
     }
 
     onOpenChange(false);
@@ -168,6 +198,26 @@ export default function TaskDialog({
               </select>
             </div>
           </div>
+          {needsProjectPicker && (
+            <div>
+              <Label htmlFor="project_id">Project *</Label>
+              <select
+                id="project_id"
+                {...register("project_id")}
+                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none"
+              >
+                <option value="">Select a project</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.title}</option>
+                ))}
+              </select>
+              {errors.project_id && (
+                <p className="mt-1 text-xs text-red-500">
+                  {errors.project_id.message}
+                </p>
+              )}
+            </div>
+          )}
           <div>
             <Label htmlFor="due_date">Due Date</Label>
             <Input id="due_date" type="date" {...register("due_date")} />

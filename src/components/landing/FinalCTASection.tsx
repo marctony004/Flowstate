@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import StarBorder from "@/components/reactbits/StarBorder";
 
-export default function FinalCTASection() {
+export default function FinalCTASection({ onScheduleDemo }: { onScheduleDemo?: () => void }) {
   return (
     <section className="relative overflow-hidden bg-primary py-20 sm:py-28">
       {/* Decorative gradient overlay */}
@@ -43,10 +43,10 @@ export default function FinalCTASection() {
           <Button
             size="lg"
             variant="outline"
-            asChild
             className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+            onClick={onScheduleDemo}
           >
-            <a href="#demo">Schedule a Demo</a>
+            Schedule a Demo
           </Button>
         </div>
         <p className="mt-4 text-sm text-primary-foreground/60">

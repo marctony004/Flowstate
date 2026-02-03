@@ -3,12 +3,15 @@ import { motion } from "framer-motion";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Calculator } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Calculator, Mail, CheckCircle } from "lucide-react";
 
 export default function ROICalculatorSection() {
   const [projects, setProjects] = useState(10);
   const [hours, setHours] = useState(5);
   const [rate, setRate] = useState(50);
+  const [reportEmail, setReportEmail] = useState("");
+  const [reportSent, setReportSent] = useState(false);
 
   const efficiencyGain = 0.4;
   const monthlySaved = Math.round(projects * hours * rate * efficiencyGain);
@@ -105,6 +108,43 @@ export default function ROICalculatorSection() {
                 <a href="#pricing">See Pricing</a>
               </Button>
             </div>
+          </div>
+
+          {/* ROI Report Email Capture */}
+          <div className="mt-6 rounded-xl border border-border/50 bg-card p-6 text-center">
+            {reportSent ? (
+              <div className="flex items-center justify-center gap-2 text-sm text-[var(--success)]">
+                <CheckCircle className="h-4 w-4" />
+                <span>Your personalized ROI report is on its way!</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-center gap-2 text-sm font-medium text-foreground">
+                  <Mail className="h-4 w-4 text-primary" />
+                  Get a detailed ROI report sent to your inbox
+                </div>
+                <form
+                  className="mx-auto mt-3 flex max-w-md gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (reportEmail) setReportSent(true);
+                  }}
+                >
+                  <Input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={reportEmail}
+                    onChange={(e) => setReportEmail(e.target.value)}
+                    required
+                    className="flex-1"
+                  />
+                  <Button type="submit">Send Report</Button>
+                </form>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  No spam. Unsubscribe anytime.
+                </p>
+              </>
+            )}
           </div>
         </motion.div>
       </div>

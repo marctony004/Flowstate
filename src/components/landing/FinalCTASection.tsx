@@ -23,7 +23,7 @@ export default function FinalCTASection() {
           Join 2,000+ creators who stopped fighting disorganization and started
           finishing projects. Your 14-day free trial is waiting.
         </p>
-        <div className="mt-8 flex justify-center">
+        <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <StarBorder
             as="div"
             color="#00BCD4"
@@ -40,6 +40,14 @@ export default function FinalCTASection() {
               <Link to="/auth/sign-up">Start Free Trial</Link>
             </Button>
           </StarBorder>
+          <Button
+            size="lg"
+            variant="outline"
+            asChild
+            className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+          >
+            <a href="#demo">Schedule a Demo</a>
+          </Button>
         </div>
         <p className="mt-4 text-sm text-primary-foreground/60">
           Free &middot; No credit card required &middot; Cancel anytime

@@ -144,6 +144,11 @@
   --sidebar-ring: #7986CB;
 }
 
+@keyframes scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
 @keyframes star-movement-bottom {
   0% { transform: translate(0%, 0%); opacity: 1; }
   100% { transform: translate(-100%, 0%); opacity: 0; }

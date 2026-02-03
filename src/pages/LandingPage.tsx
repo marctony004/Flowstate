@@ -5,6 +5,7 @@ import SocialProofSection from "@/components/landing/SocialProofSection";
 import ProductShowcaseSection from "@/components/landing/ProductShowcaseSection";
 import ROICalculatorSection from "@/components/landing/ROICalculatorSection";
 import PricingSection from "@/components/landing/PricingSection";
+import IntegrationSecuritySection from "@/components/landing/IntegrationSecuritySection";
 import FAQSection from "@/components/landing/FAQSection";
 import FinalCTASection from "@/components/landing/FinalCTASection";
 import Footer from "@/components/landing/Footer";
@@ -20,6 +21,7 @@ export default function LandingPage() {
         <ProductShowcaseSection />
         <ROICalculatorSection />
         <PricingSection />
+        <IntegrationSecuritySection />
         <FAQSection />
         <FinalCTASection />
       </main>

@@ -1,5 +1,8 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Twitter, Instagram, Linkedin, Youtube } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const columns = [
   {
@@ -46,6 +49,17 @@ function scrollToSection(href: string) {
 }
 
 export default function Footer() {
+  const [email, setEmail] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
+
+  function handleSubscribe(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email) return;
+    // TODO: integrate with email provider (SendGrid, Mailchimp, etc.)
+    setSubscribed(true);
+    setEmail("");
+  }
+
   return (
     <footer className="border-t border-border bg-card py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -104,6 +118,31 @@ export default function Footer() {
               >
                 <Youtube className="h-5 w-5" />
               </a>
+            </div>
+            {/* Newsletter signup */}
+            <div className="mt-6">
+              <p className="text-sm font-medium text-foreground">
+                Stay in the loop
+              </p>
+              {subscribed ? (
+                <p className="mt-2 text-sm text-[var(--success)]">
+                  Thanks for subscribing!
+                </p>
+              ) : (
+                <form onSubmit={handleSubscribe} className="mt-2 flex gap-2">
+                  <Input
+                    type="email"
+                    placeholder="you@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="h-9 text-sm"
+                  />
+                  <Button type="submit" size="sm" className="shrink-0">
+                    Subscribe
+                  </Button>
+                </form>
+              )}
             </div>
           </div>
 

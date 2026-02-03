@@ -6,25 +6,25 @@ import GradientText from "@/components/reactbits/GradientText";
 const benefits = [
   {
     icon: Lightbulb,
-    title: "Capture Ideas Instantly",
+    title: "Capture Ideas Without Losing Them",
     description:
-      "Never lose a creative spark again. Voice memos, text notes, and file uploads flow into one organized space — ready when inspiration strikes.",
+      "Record your creative thoughts as voice notes, sketches, or files. FlowState's AI instantly organizes them by semantic meaning, so brilliant ideas never get lost in the chaos.",
     color: "text-[var(--accent)]",
     bg: "bg-[var(--accent)]/10",
   },
   {
     icon: Users,
-    title: "Understand Collaborators",
+    title: "Understand Your Collaborators Instantly",
     description:
-      "Know your collaborators' working styles, preferences, and communication patterns. Build stronger creative partnerships effortlessly.",
+      "Feedback from bandmates, producers, and clients flows into one intelligent hub. FlowState translates vague comments like 'punchier' into actionable insights tied to your project.",
     color: "text-[var(--success)]",
     bg: "bg-[var(--success)]/10",
   },
   {
     icon: CheckCircle,
-    title: "Finish Projects",
+    title: "Finish Projects That Matter",
     description:
-      "Turn scattered tasks into clear milestones. Track progress, hit deadlines, and ship your best work with intelligent project workflows.",
+      "Stop abandoning half-finished tracks. FlowState tracks momentum and milestones while automatically surfacing tasks only when it helps—so you keep the vibe and actually ship your best work.",
     color: "text-[var(--warning)]",
     bg: "bg-[var(--warning)]/10",
   },

@@ -16,10 +16,10 @@ const tiers = [
     description: "For solo creators getting organized.",
     features: [
       "5 active projects",
-      "Basic idea capture",
-      "Task management",
-      "Mobile app access",
-      "1 GB storage",
+      "Unlimited idea capture",
+      "Feedback from up to 3 collaborators",
+      "Basic AI insights",
+      "Email support",
     ],
     cta: "Start Free Trial",
     highlighted: false,
@@ -32,11 +32,11 @@ const tiers = [
     description: "For serious creators and small teams.",
     features: [
       "Unlimited projects",
-      "AI-powered insights",
-      "Collaborator profiles",
-      "Advanced analytics",
-      "25 GB storage",
-      "Priority support",
+      "Unlimited collaborators",
+      "Advanced AI: semantic search & session recall",
+      "Explainable insights with \"Why?\" evidence",
+      "Real-time collaboration",
+      "Priority email & chat support",
     ],
     cta: "Start Free Trial",
     highlighted: true,
@@ -49,11 +49,11 @@ const tiers = [
     description: "For labels, studios, and large teams.",
     features: [
       "Everything in Professional",
-      "Custom integrations",
+      "Custom integrations (DAW plugins, studio software)",
       "Dedicated account manager",
       "SSO & advanced security",
-      "Unlimited storage",
-      "SLA guarantee",
+      "Advanced analytics & reporting",
+      "SLA & uptime guarantees",
     ],
     cta: "Contact Sales",
     highlighted: false,
@@ -99,7 +99,7 @@ export default function PricingSection() {
             </span>
             {annual && (
               <Badge variant="secondary" className="text-xs font-medium text-[var(--success)]">
-                Save 20%
+                Save 17%
               </Badge>
             )}
           </div>

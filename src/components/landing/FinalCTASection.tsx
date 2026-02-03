@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import StarBorder from "@/components/reactbits/StarBorder";
+import { Clock, CreditCard, XCircle, Zap } from "lucide-react";
 
 export default function FinalCTASection({ onScheduleDemo }: { onScheduleDemo?: () => void }) {
   return (
@@ -49,9 +50,24 @@ export default function FinalCTASection({ onScheduleDemo }: { onScheduleDemo?: (
             Schedule a Demo
           </Button>
         </div>
-        <p className="mt-4 text-sm text-primary-foreground/60">
-          Free &middot; No credit card required &middot; Cancel anytime
-        </p>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-primary-foreground/70">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            <span className="text-sm">14-day trial</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            <span className="text-sm">No credit card</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <XCircle className="h-4 w-4" />
+            <span className="text-sm">Cancel anytime</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            <span className="text-sm">Setup in 5 minutes</span>
+          </div>
+        </div>
       </motion.div>
     </section>
   );

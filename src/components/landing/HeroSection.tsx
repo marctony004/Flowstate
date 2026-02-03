@@ -33,10 +33,10 @@ export default function HeroSection() {
             />
 
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-              FlowState is the creative intelligence platform that helps
-              musicians, producers, and artists capture ideas, understand
-              collaborators, and finish projects — without the organizational
-              overwhelm.
+              Capture messy creative ideas. Organize fragmented feedback. Finish
+              projects that matter. FlowState is the AI-powered companion that
+              translates your creative language into structured progress—without
+              killing the vibe.
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row lg:items-start">

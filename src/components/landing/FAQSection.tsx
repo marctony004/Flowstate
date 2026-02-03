@@ -8,23 +8,31 @@ import {
 const faqs = [
   {
     q: "Do I need a credit card to start?",
-    a: "No. You can start your 14-day free trial without entering any payment information. We'll remind you before the trial ends so you can decide if FlowState is right for you.",
+    a: "No credit card required! Your 14-day trial is completely free. You can continue on our free plan afterward or upgrade anytime. We believe in letting you experience FlowState's value before any commitment.",
   },
   {
     q: "Can I cancel anytime?",
-    a: "Absolutely. There are no long-term contracts. You can cancel your subscription at any time from your account settings, and you'll retain access until the end of your billing period.",
+    a: "Absolutely. Cancel anytime with no questions asked. Your data remains yours—you can export it whenever you need. We're confident you'll love FlowState, but we respect your freedom to choose.",
   },
   {
     q: "Is FlowState compatible with my DAW?",
-    a: "FlowState works alongside any DAW — Ableton, Logic Pro, FL Studio, Pro Tools, and more. It's a companion tool for organizing your creative workflow, not a plugin that requires DAW integration.",
+    a: "FlowState is DAW-agnostic and designed to fit alongside any DAW workflow (Logic Pro, Ableton, FL Studio, Pro Tools, Reaper, and more) by organizing the language and decisions around your sessions.",
   },
   {
-    q: "How does FlowState keep my data private?",
-    a: "Your data is encrypted at rest and in transit. We never share your creative work or personal information with third parties. You own your data, and you can export or delete it at any time.",
+    q: "Can FlowState remember what we decided in past sessions?",
+    a: "Yes. FlowState builds a private, personal session memory from your notes and voice transcripts so you can ask things like 'What did we decide about the hook last week?' and get answers with summaries, quotes, and timestamps.",
+  },
+  {
+    q: "How do I trust the AI insights?",
+    a: "Every insight includes a 'Why?' explanation that shows the exact notes, transcript snippets, and timestamps it used—so you can verify decisions and stay in control. No black-box magic.",
+  },
+  {
+    q: "Is my creative work private and secure?",
+    a: "Yes. Your projects are encrypted and private by default. We never share your creative work with anyone. Full GDPR and SOC 2 compliance. Your artistic vision is sacred to us.",
   },
   {
     q: "Can I collaborate with my team?",
-    a: "Yes! The Professional plan supports team collaboration with shared projects, collaborator profiles, and real-time updates. Enterprise plans include advanced team management and permissions.",
+    a: "Yes! Invite bandmates, producers, and collaborators to your projects. Real-time collaboration with semantic feedback organization. Everyone stays aligned on the creative vision.",
   },
   {
     q: "What happens to my data if I cancel?",

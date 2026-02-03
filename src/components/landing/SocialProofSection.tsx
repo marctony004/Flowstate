@@ -134,9 +134,9 @@ export default function SocialProofSection() {
           </div>
           <div className="text-center">
             <div className="text-3xl font-bold text-primary sm:text-4xl">
-              <CountUp to={4.9} />/5
+              $<CountUp to={10} />M+
             </div>
-            <div className="mt-1 text-sm text-muted-foreground">Rating</div>
+            <div className="mt-1 text-sm text-muted-foreground">Value Created</div>
           </div>
         </div>
 

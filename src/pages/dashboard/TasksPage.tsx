@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { CheckSquare, Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { CheckSquare, Plus, Search, Pencil, Trash2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
@@ -7,6 +7,8 @@ import type { Task } from "@/types/database";
 import TaskDialog from "@/components/dashboard/TaskDialog";
 import DeleteDialog from "@/components/dashboard/DeleteDialog";
 import { toast } from "sonner";
+import { parseTaskWithAI } from "@/lib/nlpTaskService";
+import { logActivity } from "@/lib/activityLogger";
 
 const columns = [
   { key: "todo", label: "To Do" },
@@ -32,6 +34,19 @@ export default function TasksPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [quickAddInput, setQuickAddInput] = useState("");
+  const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
+
+  // Fetch projects for NL task matching
+  useEffect(() => {
+    if (!session?.user.id) return;
+    supabase
+      .from("projects")
+      .select("id, title")
+      .eq("owner_id", session.user.id)
+      .order("title")
+      .then(({ data }) => setProjects(data ?? []));
+  }, [session?.user.id]);
 
   const fetchTasks = useCallback(async () => {
     if (!session?.user.id) return;
@@ -57,6 +72,64 @@ export default function TasksPage() {
     setDeleteTarget(null);
     if (error) { toast.error("Failed to delete task"); return; }
     toast.success("Task deleted");
+    fetchTasks();
+  }
+
+  // Quick add task with natural language
+  async function handleQuickAdd(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter" || !quickAddInput.trim() || !session?.user.id) return;
+
+    // Try AI parsing first, fall back to local
+    const parsed = await parseTaskWithAI(quickAddInput, projects);
+    if (!parsed.title) return;
+
+    // Use AI-matched project, or try to match project hint, or use only project
+    let projectId: string | null = parsed.projectMatchId || null;
+    if (!projectId && parsed.projectHint) {
+      const matchedProject = projects.find(p =>
+        p.title.toLowerCase().includes(parsed.projectHint!.toLowerCase())
+      );
+      if (matchedProject) projectId = matchedProject.id;
+    }
+
+    // Use first project if no match and only one project exists
+    if (!projectId && projects.length === 1) {
+      projectId = projects[0].id;
+    }
+
+    if (!projectId) {
+      toast.error("Couldn't match a project. Try including a project name or use the form.");
+      return;
+    }
+
+    const payload = {
+      title: parsed.title,
+      description: null,
+      status: "todo",
+      priority: parsed.priority || "medium",
+      due_date: parsed.dueDate || null,
+      project_id: projectId,
+      created_by: session.user.id,
+    };
+
+    const { data: newTask, error } = await supabase.from("tasks").insert(payload).select("id").single();
+    if (error) {
+      toast.error("Failed to create task");
+      return;
+    }
+
+    const aiLabel = parsed.usedAI ? " ✨" : "";
+    toast.success(`Task created${aiLabel}: "${parsed.title}"${parsed.dueDate ? ` (due ${parsed.dueDateText})` : ""}`);
+    logActivity({
+      userId: session.user.id,
+      action: "create",
+      entityType: "task",
+      entityId: newTask?.id,
+      projectId,
+      metadata: { title: parsed.title, nlParsed: true },
+    });
+
+    setQuickAddInput("");
     fetchTasks();
   }
 
@@ -90,6 +163,25 @@ export default function TasksPage() {
           <Plus className="mr-2 h-4 w-4" />
           New Task
         </Button>
+      </div>
+
+      {/* Quick Add with Natural Language */}
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <span>Quick add with natural language</span>
+        </div>
+        <input
+          type="text"
+          placeholder='Try: "Finish mix by Friday" or "Record vocals for Track 3 tomorrow"'
+          value={quickAddInput}
+          onChange={(e) => setQuickAddInput(e.target.value)}
+          onKeyDown={handleQuickAdd}
+          className="h-10 w-full rounded-lg border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        <p className="mt-2 text-xs text-muted-foreground">
+          Press Enter to create. Dates like "tomorrow", "next week", "by Friday" are automatically parsed.
+        </p>
       </div>
 
       {/* Search */}

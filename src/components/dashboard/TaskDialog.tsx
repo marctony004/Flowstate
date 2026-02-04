@@ -18,6 +18,13 @@ import supabase from "@/supabase";
 import type { Task } from "@/types/database";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
+import NLTaskInput from "./NLTaskInput";
+import type { ParsedTask } from "@/lib/nlpTaskParser";
+
+interface ParsedTaskWithMatch extends ParsedTask {
+  projectMatchId?: string;
+}
+import { Sparkles, List } from "lucide-react";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -49,6 +56,8 @@ export default function TaskDialog({
   const isEdit = !!task;
   const needsProjectPicker = !projectId && !isEdit;
   const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
+  const [useNaturalLanguage, setUseNaturalLanguage] = useState(!isEdit);
+  const [selectedNLProjectId, setSelectedNLProjectId] = useState<string>("");
 
   useEffect(() => {
     if (!needsProjectPicker || !session?.user.id) return;
@@ -98,8 +107,65 @@ export default function TaskDialog({
             project_id: projectId ?? "",
           }
       );
+      setUseNaturalLanguage(!task);
+      setSelectedNLProjectId(projectId ?? "");
     }
   }, [open, task, projectId, reset]);
+
+  // Handle NL task creation
+  const handleNLTaskParsed = async (parsed: ParsedTaskWithMatch) => {
+    if (!session?.user.id) return;
+
+    // Use AI-matched project, or selected project, or try to match from hint
+    let matchedProjectId = parsed.projectMatchId || projectId || selectedNLProjectId;
+    if (parsed.projectHint && !matchedProjectId) {
+      const matchedProject = projects.find(p =>
+        p.title.toLowerCase().includes(parsed.projectHint!.toLowerCase())
+      );
+      if (matchedProject) {
+        matchedProjectId = matchedProject.id;
+      }
+    }
+
+    if (!matchedProjectId) {
+      toast.error("Please select a project first");
+      return;
+    }
+
+    const payload = {
+      title: parsed.title,
+      description: null,
+      status: "todo",
+      priority: parsed.priority || "medium",
+      due_date: parsed.dueDate || null,
+      project_id: matchedProjectId,
+      created_by: session.user.id,
+    };
+
+    const { data: newTask, error } = await supabase
+      .from("tasks")
+      .insert(payload)
+      .select("id")
+      .single();
+
+    if (error) {
+      toast.error("Failed to create task");
+      return;
+    }
+
+    toast.success("Task created from natural language!");
+    logActivity({
+      userId: session.user.id,
+      action: "create",
+      entityType: "task",
+      entityId: newTask?.id,
+      projectId: matchedProjectId,
+      metadata: { title: parsed.title, nlParsed: true },
+    });
+
+    onOpenChange(false);
+    onSuccess();
+  };
 
   async function onSubmit(data: FormData) {
     if (!session?.user.id) return;
@@ -151,8 +217,63 @@ export default function TaskDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Task" : "New Task"}</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>{isEdit ? "Edit Task" : "New Task"}</DialogTitle>
+            {!isEdit && (
+              <div className="flex gap-1 rounded-lg border border-border p-1">
+                <Button
+                  type="button"
+                  variant={useNaturalLanguage ? "default" : "ghost"}
+                  size="sm"
+                  className="h-7 gap-1 px-2 text-xs"
+                  onClick={() => setUseNaturalLanguage(true)}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  Natural
+                </Button>
+                <Button
+                  type="button"
+                  variant={!useNaturalLanguage ? "default" : "ghost"}
+                  size="sm"
+                  className="h-7 gap-1 px-2 text-xs"
+                  onClick={() => setUseNaturalLanguage(false)}
+                >
+                  <List className="h-3 w-3" />
+                  Form
+                </Button>
+              </div>
+            )}
+          </div>
         </DialogHeader>
+
+        {/* Natural Language Input Mode */}
+        {useNaturalLanguage && !isEdit ? (
+          <div className="py-2">
+            <NLTaskInput
+              onTaskParsed={handleNLTaskParsed}
+              onCancel={() => onOpenChange(false)}
+              projectId={projectId}
+              projects={projects}
+            />
+            {needsProjectPicker && (
+              <div className="mt-4">
+                <Label htmlFor="nl_project_id">Project *</Label>
+                <select
+                  id="nl_project_id"
+                  value={selectedNLProjectId}
+                  onChange={(e) => setSelectedNLProjectId(e.target.value)}
+                  className="mt-1 h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] outline-none"
+                >
+                  <option value="">Select a project</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        ) : (
+        /* Structured Form Mode */
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
             <Label htmlFor="title">Title *</Label>
@@ -239,6 +360,7 @@ export default function TaskDialog({
             </Button>
           </DialogFooter>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );

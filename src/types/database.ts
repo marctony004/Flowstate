@@ -178,6 +178,7 @@ export type Database = {
           created_at: string
           display_name: string
           id: string
+          is_admin: boolean
           onboarded_at: string | null
           plan: string
           role: string
@@ -190,6 +191,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           id: string
+          is_admin?: boolean
           onboarded_at?: string | null
           plan?: string
           role?: string
@@ -202,6 +204,7 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          is_admin?: boolean
           onboarded_at?: string | null
           plan?: string
           role?: string

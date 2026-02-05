@@ -16,6 +16,7 @@ import TasksPage from "../pages/dashboard/TasksPage.tsx";
 import CollaboratorsPage from "../pages/dashboard/CollaboratorsPage.tsx";
 import SettingsPage from "../pages/dashboard/SettingsPage.tsx";
 import OnboardingPage from "../pages/dashboard/OnboardingPage.tsx";
+import UsersPage from "../pages/dashboard/admin/UsersPage.tsx";
 
 const router = createBrowserRouter([
   // Landing page — no session provider needed
@@ -64,6 +65,7 @@ const router = createBrowserRouter([
               { path: "tasks", element: <TasksPage /> },
               { path: "collaborators", element: <CollaboratorsPage /> },
               { path: "settings", element: <SettingsPage /> },
+              { path: "admin/users", element: <UsersPage /> },
             ],
           },
         ],

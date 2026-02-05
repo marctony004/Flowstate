@@ -18,6 +18,7 @@ import supabase from "@/supabase";
 import type { Project } from "@/types/database";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
+import { useEmbedding } from "@/hooks/useEmbedding";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -45,6 +46,7 @@ export default function ProjectDialog({
   onSuccess,
 }: ProjectDialogProps) {
   const { session } = useSession();
+  const { embedProject } = useEmbedding();
   const isEdit = !!project;
 
   const {
@@ -115,6 +117,14 @@ export default function ProjectDialog({
         entityId: project.id,
         metadata: { title: data.title },
       });
+
+      // Regenerate embedding with updated content
+      embedProject(project.id, {
+        title: data.title,
+        description: data.description,
+        genre: data.genre,
+        status: data.status,
+      });
     } else {
       const { data: newProject, error } = await supabase
         .from("projects")
@@ -130,6 +140,16 @@ export default function ProjectDialog({
         entityId: newProject?.id,
         metadata: { title: data.title },
       });
+
+      // Generate embedding in background
+      if (newProject?.id) {
+        embedProject(newProject.id, {
+          title: data.title,
+          description: data.description,
+          genre: data.genre,
+          status: data.status,
+        });
+      }
     }
 
     onOpenChange(false);

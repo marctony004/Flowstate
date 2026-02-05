@@ -19,6 +19,7 @@ import type { Idea } from "@/types/database";
 import { toast } from "sonner";
 import { Upload, X, Loader2 } from "lucide-react";
 import { logActivity } from "@/lib/activityLogger";
+import { useEmbedding } from "@/hooks/useEmbedding";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -43,6 +44,7 @@ export default function IdeaDialog({
   onSuccess,
 }: IdeaDialogProps) {
   const { session } = useSession();
+  const { embedIdea } = useEmbedding();
   const isEdit = !!idea;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -139,6 +141,14 @@ export default function IdeaDialog({
         entityId: idea.id,
         metadata: { title: data.title },
       });
+
+      // Regenerate embedding with updated content
+      embedIdea(idea.id, {
+        title: data.title,
+        content: data.content,
+        type: data.type,
+        tags: tags ?? undefined,
+      });
     } else {
       const { data: newIdea, error } = await supabase
         .from("ideas")
@@ -154,6 +164,16 @@ export default function IdeaDialog({
         entityId: newIdea?.id,
         metadata: { title: data.title },
       });
+
+      // Generate embedding in background
+      if (newIdea?.id) {
+        embedIdea(newIdea.id, {
+          title: data.title,
+          content: data.content,
+          type: data.type,
+          tags: tags ?? undefined,
+        });
+      }
     }
 
     onOpenChange(false);

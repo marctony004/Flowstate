@@ -18,6 +18,7 @@ import supabase from "@/supabase";
 import type { Task } from "@/types/database";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
+import { useEmbedding } from "@/hooks/useEmbedding";
 import NLTaskInput from "./NLTaskInput";
 import type { ParsedTask } from "@/lib/nlpTaskParser";
 
@@ -53,6 +54,7 @@ export default function TaskDialog({
   onSuccess,
 }: TaskDialogProps) {
   const { session } = useSession();
+  const { embedTask } = useEmbedding();
   const isEdit = !!task;
   const needsProjectPicker = !projectId && !isEdit;
   const [projects, setProjects] = useState<{ id: string; title: string }[]>([]);
@@ -163,6 +165,15 @@ export default function TaskDialog({
       metadata: { title: parsed.title, nlParsed: true },
     });
 
+    // Generate embedding in background
+    if (newTask?.id) {
+      embedTask(newTask.id, {
+        title: parsed.title,
+        status: "todo",
+        priority: parsed.priority || "medium",
+      });
+    }
+
     onOpenChange(false);
     onSuccess();
   };
@@ -190,6 +201,14 @@ export default function TaskDialog({
         projectId: task.project_id,
         metadata: { title: data.title },
       });
+
+      // Regenerate embedding with updated content
+      embedTask(task.id, {
+        title: data.title,
+        description: data.description,
+        status: data.status,
+        priority: data.priority,
+      });
     } else {
       const projectIdToUse = data.project_id || projectId!;
       const { data: newTask, error } = await supabase.from("tasks").insert({
@@ -207,6 +226,16 @@ export default function TaskDialog({
         projectId: projectIdToUse,
         metadata: { title: data.title },
       });
+
+      // Generate embedding in background
+      if (newTask?.id) {
+        embedTask(newTask.id, {
+          title: data.title,
+          description: data.description,
+          status: data.status,
+          priority: data.priority,
+        });
+      }
     }
 
     onOpenChange(false);

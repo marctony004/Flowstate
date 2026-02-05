@@ -1,65 +1,151 @@
 import { useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Save, User, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
-import type { Profile } from "@/types/database";
 import { toast } from "sonner";
 
+// Validation schema
+const profileSchema = z.object({
+  display_name: z
+    .string()
+    .min(2, "Display name must be at least 2 characters")
+    .max(50, "Display name must be less than 50 characters"),
+  bio: z
+    .string()
+    .max(500, "Bio must be less than 500 characters")
+    .optional()
+    .or(z.literal("")),
+  avatar_url: z
+    .string()
+    .url("Must be a valid URL")
+    .optional()
+    .or(z.literal("")),
+  timezone: z.string().optional().or(z.literal("")),
+  role: z.enum(["creator", "producer", "engineer", "songwriter", "artist", "other"]),
+});
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
+
+const roleOptions = [
+  { value: "creator", label: "Creator" },
+  { value: "producer", label: "Producer" },
+  { value: "engineer", label: "Engineer" },
+  { value: "songwriter", label: "Songwriter" },
+  { value: "artist", label: "Artist" },
+  { value: "other", label: "Other" },
+];
+
+const timezoneOptions = [
+  { value: "America/New_York", label: "Eastern Time (ET)" },
+  { value: "America/Chicago", label: "Central Time (CT)" },
+  { value: "America/Denver", label: "Mountain Time (MT)" },
+  { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
+  { value: "America/Anchorage", label: "Alaska Time (AKT)" },
+  { value: "Pacific/Honolulu", label: "Hawaii Time (HT)" },
+  { value: "Europe/London", label: "London (GMT)" },
+  { value: "Europe/Paris", label: "Paris (CET)" },
+  { value: "Asia/Tokyo", label: "Tokyo (JST)" },
+  { value: "Australia/Sydney", label: "Sydney (AEST)" },
+  { value: "UTC", label: "UTC" },
+];
+
 export default function SettingsPage() {
-  const { session } = useSession();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { session, profile, refreshProfile } = useSession();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    display_name: "",
-    bio: "",
-    timezone: "",
-    role: "",
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      display_name: "",
+      bio: "",
+      avatar_url: "",
+      timezone: "",
+      role: "creator",
+    },
   });
 
+  // Load profile data
   useEffect(() => {
-    if (!session?.user.id) return;
-
-    async function fetchProfile() {
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", session!.user.id)
-        .single();
-
-      if (data) {
-        setProfile(data);
-        setForm({
-          display_name: data.display_name,
-          bio: data.bio ?? "",
-          timezone: data.timezone ?? "",
-          role: data.role,
-        });
-      }
+    if (profile) {
+      form.reset({
+        display_name: profile.display_name || "",
+        bio: profile.bio || "",
+        avatar_url: profile.avatar_url || "",
+        timezone: profile.timezone || "",
+        role: (profile.role as ProfileFormValues["role"]) || "creator",
+      });
+      setAvatarPreview(profile.avatar_url);
       setLoading(false);
     }
+  }, [profile, form]);
 
-    fetchProfile();
-  }, [session?.user.id]);
+  // Watch avatar URL for preview
+  const watchedAvatarUrl = form.watch("avatar_url");
+  useEffect(() => {
+    if (watchedAvatarUrl && watchedAvatarUrl !== avatarPreview) {
+      // Validate URL before setting preview
+      try {
+        new URL(watchedAvatarUrl);
+        setAvatarPreview(watchedAvatarUrl);
+      } catch {
+        // Invalid URL, don't update preview
+      }
+    } else if (!watchedAvatarUrl) {
+      setAvatarPreview(null);
+    }
+  }, [watchedAvatarUrl]);
 
-  async function handleSave() {
+  async function onSubmit(data: ProfileFormValues) {
     if (!session?.user.id) return;
     setSaving(true);
 
     const { error } = await supabase
       .from("profiles")
       .update({
-        display_name: form.display_name,
-        bio: form.bio || null,
-        timezone: form.timezone || null,
-        role: form.role,
+        display_name: data.display_name,
+        bio: data.bio || null,
+        avatar_url: data.avatar_url || null,
+        timezone: data.timezone || null,
+        role: data.role,
+        updated_at: new Date().toISOString(),
       })
       .eq("id", session.user.id);
 
     setSaving(false);
-    if (error) { toast.error("Failed to save profile"); return; }
-    toast.success("Profile saved");
+
+    if (error) {
+      toast.error("Failed to save profile");
+      console.error(error);
+      return;
+    }
+
+    toast.success("Profile saved successfully");
+    // Refresh profile in context so changes appear everywhere
+    await refreshProfile();
   }
 
   if (loading) {
@@ -73,75 +159,167 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
+        <h1 className="font-heading text-2xl font-bold text-foreground">Settings</h1>
         <p className="mt-1 text-muted-foreground">
           Manage your profile and preferences
         </p>
       </div>
 
-      {/* Profile */}
-      <div className="rounded-xl border border-border bg-card p-6">
-        <h2 className="mb-4 text-lg font-semibold text-foreground">Profile</h2>
-        <div className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">
-              Display Name
-            </label>
-            <input
-              type="text"
-              value={form.display_name}
-              onChange={(e) =>
-                setForm({ ...form, display_name: e.target.value })
-              }
-              className="h-10 w-full rounded-lg border border-border bg-background px-4 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
+      {/* Profile Form */}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="rounded-xl border border-border bg-card p-6">
+            <h2 className="mb-6 text-lg font-semibold text-foreground">Profile</h2>
+
+            {/* Avatar Section */}
+            <div className="mb-6 flex items-start gap-6">
+              <div className="relative">
+                <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-primary">
+                  {avatarPreview ? (
+                    <img
+                      src={avatarPreview}
+                      alt="Avatar preview"
+                      className="h-full w-full object-cover"
+                      onError={() => setAvatarPreview(null)}
+                    />
+                  ) : (
+                    <User className="h-10 w-10" />
+                  )}
+                </div>
+                <div className="absolute -bottom-1 -right-1 rounded-full bg-card p-1 shadow-sm">
+                  <Camera className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <FormField
+                  control={form.control}
+                  name="avatar_url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Avatar URL</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="https://example.com/avatar.jpg"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Enter a URL to an image for your profile picture
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {/* Display Name */}
+              <FormField
+                control={form.control}
+                name="display_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Display Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Your name" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      This is how you'll appear throughout the app
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Role */}
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Creative Role</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your role" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {roleOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      What best describes your creative work
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Bio */}
+              <FormField
+                control={form.control}
+                name="bio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bio</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Tell us about yourself and your creative journey..."
+                        rows={4}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {field.value?.length || 0}/500 characters
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Timezone */}
+              <FormField
+                control={form.control}
+                name="timezone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Timezone</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your timezone" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {timezoneOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Used for scheduling and time displays
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button type="submit" disabled={saving} className="mt-2">
+                <Save className="mr-2 h-4 w-4" />
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">
-              Role
-            </label>
-            <select
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
-              className="h-10 w-full rounded-lg border border-border bg-background px-4 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              <option value="musician">Musician</option>
-              <option value="producer">Producer</option>
-              <option value="artist">Artist</option>
-              <option value="songwriter">Songwriter</option>
-              <option value="engineer">Engineer</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">
-              Bio
-            </label>
-            <textarea
-              value={form.bio}
-              onChange={(e) => setForm({ ...form, bio: e.target.value })}
-              rows={3}
-              className="w-full rounded-lg border border-border bg-background px-4 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-foreground">
-              Timezone
-            </label>
-            <input
-              type="text"
-              value={form.timezone}
-              onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-              placeholder="e.g. America/New_York"
-              className="h-10 w-full rounded-lg border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <Button onClick={handleSave} disabled={saving}>
-            <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-        </div>
-      </div>
+        </form>
+      </Form>
 
       {/* Account Info */}
       <div className="rounded-xl border border-border bg-card p-6">
@@ -153,7 +331,7 @@ export default function SettingsPage() {
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Plan</span>
-            <span className="font-medium text-primary">
+            <span className="font-medium text-primary capitalize">
               {profile?.plan ?? "free"}
             </span>
           </div>
@@ -170,9 +348,7 @@ export default function SettingsPage() {
 
       {/* Danger Zone */}
       <div className="rounded-xl border border-red-500/30 bg-card p-6">
-        <h2 className="mb-2 text-lg font-semibold text-red-500">
-          Danger Zone
-        </h2>
+        <h2 className="mb-2 text-lg font-semibold text-red-500">Danger Zone</h2>
         <p className="mb-4 text-sm text-muted-foreground">
           Sign out of your account on this device.
         </p>

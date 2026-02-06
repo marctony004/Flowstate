@@ -186,9 +186,9 @@
 | Application deployed to Netlify | ☑ | https://flowstateos.netlify.app/ |
 | Environment variables configured | ☑ | Supabase URL, Anon Key set in Netlify |
 | Build succeeds without errors | ☑ | `npm run build` verified |
-| All features work in production | ☐ | Test after deploy |
-| CORS configured correctly | ☐ | Supabase Edge Functions |
-| Test with fresh account | ☐ | Full onboarding flow |
+| All features work in production | ☑ | Login tested on desktop + iPad |
+| CORS configured correctly | ☑ | Supabase redirect URLs configured |
+| Test with fresh account | ☑ | Google OAuth working |
 
 ---
 

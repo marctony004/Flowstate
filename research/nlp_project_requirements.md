@@ -183,8 +183,8 @@
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Application deployed to Netlify | ☐ | Need to deploy |
-| Environment variables configured | ☐ | Supabase URL, Anon Key |
+| Application deployed to Netlify | ☑ | https://flowstateos.netlify.app/ |
+| Environment variables configured | ☑ | Supabase URL, Anon Key set in Netlify |
 | Build succeeds without errors | ☑ | `npm run build` verified |
 | All features work in production | ☐ | Test after deploy |
 | CORS configured correctly | ☐ | Supabase Edge Functions |
@@ -198,7 +198,7 @@
 1. ☑ **Add user roles** - `is_admin` column + admin nav + user management page
 2. ☑ **Editable profile page** - Avatar, display name, bio, timezone with validation
 3. ☑ **Document 4 UI components** - 7 ReactBits components identified and documented
-4. ☐ **Deploy to Netlify** - Production deployment
+4. ☑ **Deploy to Netlify** - https://flowstateos.netlify.app/
 5. ☐ **Write one-page PDF** - Testing guide document
 
 ### Important (Strong Submission)
@@ -241,6 +241,7 @@ FlowState is a Creative Intelligence OS designed for musicians and producers. It
 
 ---
 
-**Document Version:** 1.1
-**Last Updated:** February 4, 2026
-**Status:** In Progress (3/5 Critical Items Complete)
+**Document Version:** 1.2
+**Last Updated:** February 5, 2026
+**Status:** In Progress (4/5 Critical Items Complete)
+**Live URL:** https://flowstateos.netlify.app/

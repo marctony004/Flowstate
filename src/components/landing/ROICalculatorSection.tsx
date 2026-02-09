@@ -19,8 +19,8 @@ export default function ROICalculatorSection() {
   const hoursSaved = Math.round(projects * hours * efficiencyGain);
 
   return (
-    <section className="bg-secondary/30 py-20 sm:py-28">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section className="bg-secondary/30 py-20 sm:py-28 section-deep blend-both">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Calculate Your ROI

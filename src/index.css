@@ -234,3 +234,177 @@
     @apply font-heading;
   }
 }
+
+/* Studio/Creative OS Design Tokens */
+@layer utilities {
+  /* Subtle grain texture overlay (decorative only, no pseudo-elements) */
+  .studio-grain {
+    position: relative;
+  }
+
+  /* Soft gradient backgrounds for sections */
+  .studio-gradient-warm {
+    background: linear-gradient(
+      135deg,
+      hsl(from var(--background) h s l / 1) 0%,
+      hsl(from var(--primary) h s 95% / 0.3) 50%,
+      hsl(from var(--accent) h s 95% / 0.2) 100%
+    );
+  }
+
+  .studio-gradient-soft {
+    background: radial-gradient(
+      ellipse at 50% 0%,
+      hsl(from var(--primary) h s 90% / 0.15) 0%,
+      transparent 50%
+    );
+  }
+
+  /* Tactile button hover effect */
+  .btn-tactile {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .btn-tactile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px hsl(from var(--primary) h s l / 0.2);
+  }
+  .btn-tactile:active {
+    transform: translateY(0);
+  }
+
+  /* DAW clip glow on hover */
+  .clip-glow-primary:hover {
+    box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 40%, transparent);
+  }
+  .clip-glow-accent:hover {
+    box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  .clip-glow-warning:hover {
+    box-shadow: 0 0 12px color-mix(in srgb, var(--warning) 40%, transparent);
+  }
+  .clip-glow-success:hover {
+    box-shadow: 0 0 12px color-mix(in srgb, var(--success) 40%, transparent);
+  }
+  .clip-glow-spark:hover {
+    box-shadow: 0 0 12px color-mix(in srgb, var(--spark) 40%, transparent);
+  }
+  .clip-glow-premium:hover {
+    box-shadow: 0 0 12px color-mix(in srgb, var(--premium) 40%, transparent);
+  }
+
+  /* Reusable studio surface: soft gradient (no pseudo-elements, keeps ::after free for blends) */
+  .studio-surface {
+    position: relative;
+    background:
+      radial-gradient(
+        ellipse at 30% 0%,
+        color-mix(in srgb, var(--primary) 6%, transparent) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        ellipse at 80% 100%,
+        color-mix(in srgb, var(--accent) 5%, transparent) 0%,
+        transparent 50%
+      );
+  }
+
+  /* Subtle repeating vertical-line waveform background */
+  .waveform-bg {
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--muted-foreground) 0px,
+      var(--muted-foreground) 1px,
+      transparent 1px,
+      transparent 8px
+    );
+    background-size: 8px 100%;
+    opacity: 0.04;
+  }
+
+  /* Deep section: slow animated gradient drift (no pseudo-elements, keeps ::before/::after free for blends) */
+  .section-deep {
+    position: relative;
+    overflow: hidden;
+    background-image:
+      radial-gradient(
+        ellipse at 40% 30%,
+        color-mix(in srgb, var(--primary) 5%, transparent) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        ellipse at 70% 70%,
+        color-mix(in srgb, var(--accent) 4%, transparent) 0%,
+        transparent 50%
+      );
+    background-size: 200% 200%;
+    background-position: 50% 50%;
+    animation: gradientDrift 30s ease-in-out infinite alternate;
+  }
+  /*
+   * Section-blend utilities
+   * Add to any section to feather its top/bottom edges into neighbors.
+   * Uses the section's own background-color (inherited via currentcolor
+   * or set explicitly) so one class works everywhere.
+   *
+   *   .blend-top    — 80px fade from transparent → section bg at top
+   *   .blend-bottom — 80px fade from section bg → transparent at bottom
+   *   .blend-both   — both edges
+   *
+   * For dark/colored sections that need to bleed a specific color into
+   * the neighbor above/below, use the data-attribute overrides:
+   *   data-blend-from="<color>"   (top edge source)
+   *   data-blend-to="<color>"     (bottom edge target)
+   */
+  .blend-top,
+  .blend-bottom,
+  .blend-both {
+    position: relative;
+  }
+
+  .blend-top::before,
+  .blend-both::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: -1px;
+    height: 80px;
+    background: linear-gradient(
+      to bottom,
+      var(--blend-from, var(--background)),
+      transparent
+    );
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .blend-bottom::after,
+  .blend-both::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: -1px;
+    height: 80px;
+    background: linear-gradient(
+      to top,
+      var(--blend-to, var(--background)),
+      transparent
+    );
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .section-deep {
+      animation: none;
+    }
+  }
+}
+
+@keyframes gradientDrift {
+  0% {
+    background-position: 50% 50%;
+  }
+  100% {
+    background-position: 55% 53%;
+  }
+}

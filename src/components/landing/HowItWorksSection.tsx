@@ -1,6 +1,27 @@
 import { motion } from "framer-motion";
 import { Mic, Brain, Rocket } from "lucide-react";
 import GradientText from "@/components/reactbits/GradientText";
+import SessionTimeline from "./SessionTimeline";
+import type { TimelineClip } from "./SessionTimeline";
+
+// Timeline clip datasets that tell a visual story per step
+const captureClips: TimelineClip[] = [
+  { label: "Voice memo", track: 0, startPercent: 5, widthPercent: 30, color: "accent" },
+  { label: "Lyric draft", track: 1, startPercent: 15, widthPercent: 35, color: "warning" },
+  { label: "Beat sketch", track: 0, startPercent: 50, widthPercent: 28, color: "primary" },
+];
+
+const understandClips: TimelineClip[] = [
+  { label: "Chorus hook", track: 0, startPercent: 3, widthPercent: 32, color: "accent" },
+  { label: "Verse 1", track: 0, startPercent: 40, widthPercent: 28, color: "primary" },
+  { label: "Feedback: louder", track: 1, startPercent: 20, widthPercent: 35, color: "spark" },
+];
+
+const forwardClips: TimelineClip[] = [
+  { label: "Track complete", track: 0, startPercent: 2, widthPercent: 40, color: "success" },
+  { label: "Master ready", track: 1, startPercent: 10, widthPercent: 35, color: "success" },
+  { label: "Released", track: 0, startPercent: 55, widthPercent: 30, color: "premium" },
+];
 
 const steps = [
   {
@@ -8,33 +29,36 @@ const steps = [
     icon: Mic,
     title: "Capture",
     description:
-      "Talk it out or type it in. FlowState captures voice notes, lyric drafts, and messy thoughts without forcing structure.",
-    callout: "Auto-transcription + idea tagging",
+      "Hum a hook, drop a voice memo, or jot down lyrics mid-session. FlowState grabs every take and reference without breaking your flow.",
+    callout: "Voice memos + stems + references",
     color: "text-[var(--accent)]",
     bg: "bg-[var(--accent)]/10",
     border: "border-[var(--accent)]/30",
+    clips: captureClips,
   },
   {
     number: "02",
     icon: Brain,
     title: "Understand",
     description:
-      "FlowState translates creative language into project context—what's decided, what's unresolved, and what keeps repeating.",
-    callout: "Semantic organization + collaboration clarity",
-    color: "text-[var(--success)]",
-    bg: "bg-[var(--success)]/10",
-    border: "border-[var(--success)]/30",
+      "Mix notes, revision requests, and vague feedback like 'make it warmer' — FlowState connects it all to the right session and section.",
+    callout: "Mix notes + revisions + feedback",
+    color: "text-[var(--primary)]",
+    bg: "bg-[var(--primary)]/10",
+    border: "border-[var(--primary)]/30",
+    clips: understandClips,
   },
   {
     number: "03",
     icon: Rocket,
     title: "Move Forward",
     description:
-      "When it's time to execute, FlowState automatically surfaces clear next steps—tasks, due dates, and milestones—without breaking creative flow.",
-    callout: "Adaptive task visibility + explainable insights",
+      "See exactly what's left before a bounce: unresolved revisions, missing stems, and final approvals — surfaced only when you're ready.",
+    callout: "Milestones + bounce readiness",
     color: "text-[var(--warning)]",
     bg: "bg-[var(--warning)]/10",
     border: "border-[var(--warning)]/30",
+    clips: forwardClips,
   },
 ];
 
@@ -58,7 +82,7 @@ export default function HowItWorksSection() {
             </GradientText>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            From chaotic ideas to shipped projects in three simple steps.
+            From scattered takes to a finished bounce in three steps.
           </p>
         </div>
 
@@ -66,7 +90,7 @@ export default function HowItWorksSection() {
         <div className="mt-16 hidden lg:block">
           <div className="relative">
             {/* Connecting line */}
-            <div className="absolute left-0 right-0 top-16 h-0.5 bg-gradient-to-r from-[var(--accent)] via-[var(--success)] to-[var(--warning)]" />
+            <div className="absolute left-0 right-0 top-[68px] h-0.5 bg-gradient-to-r from-[var(--accent)] via-[var(--primary)] to-[var(--warning)]" />
 
             <div className="grid grid-cols-3 gap-8">
               {steps.map((step, i) => (
@@ -79,9 +103,16 @@ export default function HowItWorksSection() {
                   variants={fadeUp}
                   className="relative"
                 >
-                  {/* Step number circle */}
-                  <div className={`relative z-10 mx-auto flex h-32 w-32 items-center justify-center rounded-full border-2 ${step.border} ${step.bg}`}>
-                    <step.icon className={`h-12 w-12 ${step.color}`} />
+                  {/* Timeline strip replacing the circle indicator */}
+                  <div className={`relative z-10 mx-auto w-full max-w-[280px] overflow-hidden rounded-lg border ${step.border} ${step.bg} p-2`}>
+                    <SessionTimeline
+                      clips={step.clips}
+                      trackCount={2}
+                      size="sm"
+                      showRuler={false}
+                      showPlayhead={false}
+                      animateIn
+                    />
                   </div>
 
                   {/* Content */}
@@ -116,7 +147,7 @@ export default function HowItWorksSection() {
               className={`rounded-xl border ${step.border} ${step.bg} p-6`}
             >
               <div className="flex items-start gap-4">
-                <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-background`}>
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-background">
                   <step.icon className={`h-7 w-7 ${step.color}`} />
                 </div>
                 <div>
@@ -125,6 +156,17 @@ export default function HowItWorksSection() {
                     {step.title}
                   </h3>
                 </div>
+              </div>
+              {/* Small timeline strip inside mobile card */}
+              <div className="mt-4 rounded-md border border-border/20 bg-background/50 p-1.5">
+                <SessionTimeline
+                  clips={step.clips}
+                  trackCount={2}
+                  size="sm"
+                  showRuler={false}
+                  showPlayhead={false}
+                  animateIn
+                />
               </div>
               <p className="mt-4 leading-relaxed text-muted-foreground">
                 {step.description}

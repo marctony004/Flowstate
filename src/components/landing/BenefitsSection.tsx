@@ -1,14 +1,14 @@
 import { motion } from "framer-motion";
-import { Lightbulb, Users, CheckCircle } from "lucide-react";
+import { Mic, Users, Rocket } from "lucide-react";
 import GlareHover from "@/components/reactbits/GlareHover";
 import GradientText from "@/components/reactbits/GradientText";
 
 const benefits = [
   {
-    icon: Lightbulb,
+    icon: Mic,
     title: "Capture Ideas Without Losing Them",
     description:
-      "Record your creative thoughts as voice notes, sketches, or files. FlowState's AI instantly organizes them by semantic meaning, so brilliant ideas never get lost in the chaos.",
+      "Hum a melody, record a rough take, or drop a reference track. FlowState tags and organizes every idea by session and section, so nothing gets buried in your voice memos.",
     color: "text-[var(--accent)]",
     bg: "bg-[var(--accent)]/10",
   },
@@ -16,15 +16,15 @@ const benefits = [
     icon: Users,
     title: "Understand Your Collaborators Instantly",
     description:
-      "Feedback from bandmates, producers, and clients flows into one intelligent hub. FlowState translates vague comments like 'punchier' into actionable insights tied to your project.",
-    color: "text-[var(--success)]",
-    bg: "bg-[var(--success)]/10",
+      "Mix notes from your engineer, revision requests from the label, feedback from collaborators — it all flows into one place, linked to the right session and section.",
+    color: "text-[var(--primary)]",
+    bg: "bg-[var(--primary)]/10",
   },
   {
-    icon: CheckCircle,
+    icon: Rocket,
     title: "Finish Projects That Matter",
     description:
-      "Stop abandoning half-finished tracks. FlowState tracks momentum and milestones while automatically surfacing tasks only when it helps—so you keep the vibe and actually ship your best work.",
+      "Stop abandoning half-finished tracks. FlowState shows you what's left — unresolved revisions, missing stems, pending approvals — so you bounce your best work on time.",
     color: "text-[var(--warning)]",
     bg: "bg-[var(--warning)]/10",
   },
@@ -41,7 +41,7 @@ const fadeUp = {
 
 export default function BenefitsSection() {
   return (
-    <section id="features" className="py-20 sm:py-28">
+    <section id="features" className="py-20 sm:py-28 studio-grain relative">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -50,8 +50,7 @@ export default function BenefitsSection() {
             </GradientText>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            Three core capabilities that transform how creative professionals
-            work.
+            Three ways FlowState keeps your sessions moving forward.
           </p>
         </div>
 

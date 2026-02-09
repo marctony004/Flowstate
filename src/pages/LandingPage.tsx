@@ -9,7 +9,10 @@ import ROICalculatorSection from "@/components/landing/ROICalculatorSection";
 import PricingSection from "@/components/landing/PricingSection";
 import IntegrationSecuritySection from "@/components/landing/IntegrationSecuritySection";
 import FAQSection from "@/components/landing/FAQSection";
+import SessionJourneySection from "@/components/landing/SessionJourneySection";
 import FinalCTASection from "@/components/landing/FinalCTASection";
+import ManifestoSection from "@/components/landing/ManifestoSection";
+import ClosingNoteSection from "@/components/landing/ClosingNoteSection";
 import Footer from "@/components/landing/Footer";
 import DemoRequestDialog from "@/components/landing/DemoRequestDialog";
 
@@ -29,7 +32,10 @@ export default function LandingPage() {
         <PricingSection />
         <IntegrationSecuritySection />
         <FAQSection />
+        <SessionJourneySection />
         <FinalCTASection onScheduleDemo={() => setDemoOpen(true)} />
+        <ManifestoSection />
+        <ClosingNoteSection />
       </main>
       <Footer />
       <DemoRequestDialog open={demoOpen} onOpenChange={setDemoOpen} />

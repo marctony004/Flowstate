@@ -1,10 +1,10 @@
 import { type ReactNode } from "react";
 import { motion } from "framer-motion";
 import {
-  Shield,
-  Lock,
-  KeyRound,
-  FileCheck,
+  Sparkles,
+  Fingerprint,
+  Users,
+  BadgeCheck,
   CheckCircle,
 } from "lucide-react";
 import {
@@ -45,17 +45,17 @@ const complianceBadges = [
 ];
 
 const securityFeatures = [
-  { icon: Lock, text: "AES-256 encryption at rest and in transit" },
-  { icon: KeyRound, text: "Single Sign-On (SSO) with SAML 2.0" },
-  { icon: Shield, text: "Role-based access control (RBAC)" },
-  { icon: FileCheck, text: "Regular third-party security audits" },
+  { icon: Sparkles, text: "Your work stays private with end-to-end encryption" },
+  { icon: Fingerprint, text: "Easy sign-in with SSO and your existing accounts" },
+  { icon: Users, text: "Control who sees what with team permissions" },
+  { icon: BadgeCheck, text: "Regularly audited so your stems stay safe" },
 ];
 
 function IntegrationCard({ name, category, icon, color }: { name: string; category: string; icon: ReactNode; color: string }) {
   return (
-    <div className="group flex shrink-0 flex-col items-center justify-center rounded-lg border border-border bg-background px-5 py-4 text-center transition-all hover:border-primary/50 hover:shadow-sm">
+    <div className="group flex shrink-0 flex-col items-center justify-center rounded-xl border border-border/50 bg-background/80 px-5 py-4 text-center shadow-sm transition-all hover:border-primary/30 hover:shadow-md hover:-translate-y-0.5">
       <div
-        className="flex h-10 w-10 items-center justify-center rounded-md text-muted-foreground grayscale transition-all group-hover:grayscale-0"
+        className="flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground grayscale transition-all group-hover:grayscale-0"
         style={{ color }}
       >
         {icon}
@@ -73,7 +73,7 @@ export default function IntegrationSecuritySection() {
   const tickerItems = [...integrations, ...integrations];
 
   return (
-    <section id="integrations" className="bg-muted/50 py-20 sm:py-28">
+    <section id="integrations" className="bg-muted/30 py-20 sm:py-28 studio-grain relative blend-both">
       {/* Integrations — full-width scrolling ticker */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
@@ -84,11 +84,11 @@ export default function IntegrationSecuritySection() {
           className="text-center"
         >
           <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Connects With Your Existing Stack
+            Works With Your Setup
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            FlowState integrates seamlessly with the tools you already use,
-            so you can stay in your creative flow without switching contexts.
+            FlowState plugs into your DAW, cloud storage, and communication
+            tools — so you never leave your session to update a spreadsheet.
           </p>
         </motion.div>
       </div>
@@ -125,11 +125,11 @@ export default function IntegrationSecuritySection() {
           className="text-center"
         >
           <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Enterprise-Grade Security
+            Built for Creative Professionals
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
-            Your creative work deserves the highest level of protection. We
-            take security seriously so you can focus on creating.
+            Your creative work deserves the best protection. We handle the
+            technical stuff so you can focus on making music.
           </p>
         </motion.div>
 
@@ -142,9 +142,9 @@ export default function IntegrationSecuritySection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.3, delay: i * 0.1 }}
-              className="flex flex-col items-center rounded-lg border border-border bg-background p-4 text-center"
+              className="flex flex-col items-center rounded-xl border border-border/50 bg-background/80 p-4 text-center shadow-sm"
             >
-              <Shield className="h-6 w-6 text-[var(--success)]" />
+              <BadgeCheck className="h-6 w-6 text-primary" />
               <span className="mt-2 text-sm font-bold text-foreground">
                 {badge.label}
               </span>
@@ -166,7 +166,7 @@ export default function IntegrationSecuritySection() {
               transition={{ duration: 0.3, delay: i * 0.1 }}
               className="flex items-start gap-3"
             >
-              <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-[var(--success)]" />
+              <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
               <span className="text-sm text-foreground">{feature.text}</span>
             </motion.div>
           ))}

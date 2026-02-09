@@ -7,8 +7,8 @@ import {
   Moon,
   ChevronDown,
   Lightbulb,
-  BarChart3,
-  Shield,
+  Sliders,
+  Music,
   Workflow,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -89,14 +89,14 @@ const navItems: NavItem[] = [
             description="Voice memos, notes, and files in one creative space"
           />
           <FeatureCard
-            icon={<BarChart3 className="h-5 w-5" />}
-            title="AI-Powered Insights"
-            description="Understand patterns in your creative workflow"
+            icon={<Sliders className="h-5 w-5" />}
+            title="Mix & Master Your Tasks"
+            description="Fine-tune your workflow like a pro"
           />
           <FeatureCard
-            icon={<Shield className="h-5 w-5" />}
-            title="Privacy First"
-            description="End-to-end encryption for all your creative work"
+            icon={<Music className="h-5 w-5" />}
+            title="Built for Musicians"
+            description="Tools designed for how creatives actually work"
           />
           <FeatureCard
             icon={<Workflow className="h-5 w-5" />}

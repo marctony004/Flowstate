@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard,
+  Disc3,
   FolderKanban,
-  Lightbulb,
   CheckSquare,
   Users,
   Settings,
@@ -15,6 +14,9 @@ import {
   Search,
   Command,
   Shield,
+  ChevronsLeft,
+  ChevronsRight,
+  Mic,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,9 +27,9 @@ import SearchDialog, { useSearchShortcut } from "./SearchDialog";
 import AskFlowState from "./AskFlowState";
 
 const navItems = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Session Hub", href: "/dashboard", icon: Disc3 },
   { label: "Projects", href: "/dashboard/projects", icon: FolderKanban },
-  { label: "Ideas", href: "/dashboard/ideas", icon: Lightbulb },
+  { label: "Ideas", href: "/dashboard/ideas", icon: Mic },
   { label: "Tasks", href: "/dashboard/tasks", icon: CheckSquare },
   { label: "Collaborators", href: "/dashboard/collaborators", icon: Users },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
@@ -58,69 +60,111 @@ function useDarkMode() {
   return [dark, () => setDark((d) => !d)] as const;
 }
 
+function useSidebarPinned() {
+  const [pinned, setPinned] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("sidebar-pinned") === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("sidebar-pinned", String(pinned));
+  }, [pinned]);
+
+  return [pinned, () => setPinned((p) => !p)] as const;
+}
+
 export default function DashboardLayout() {
   const { session, profile, isAdmin } = useSession();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [pinned, togglePinned] = useSidebarPinned();
   const [dark, toggleDark] = useDarkMode();
   const [searchOpen, setSearchOpen] = useState(false);
   const [askAIOpen, setAskAIOpen] = useState(false);
   const [buttonBursting, setButtonBursting] = useState(false);
 
-  // Handle AI button click with burst animation
+  const expanded = pinned || hovered;
+
   const handleAIButtonClick = () => {
     setButtonBursting(true);
-    // Delay opening the panel to let burst animation play
     setTimeout(() => {
       setAskAIOpen(true);
-      // Reset burst state after panel opens
       setTimeout(() => setButtonBursting(false), 100);
     }, 200);
   };
 
-  // Register Cmd+K shortcut
   const openSearch = useCallback(() => setSearchOpen(true), []);
   useSearchShortcut(openSearch);
+
+  const userInitial =
+    profile?.display_name?.charAt(0).toUpperCase() ||
+    session?.user.email?.charAt(0).toUpperCase() ||
+    "?";
 
   return (
     <div className="flex h-screen bg-background">
       {/* Mobile overlay */}
-      {sidebarOpen && (
+      {mobileOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => setMobileOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar — studio tool dock */}
       <aside
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-card transition-transform duration-200 lg:static lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border/40 bg-card/90 backdrop-blur-md",
+          "transition-[width] duration-[250ms] ease-out motion-reduce:transition-none",
+          "lg:static",
+          mobileOpen ? "translate-x-0 w-64" : "-translate-x-full w-64",
+          "lg:translate-x-0",
+          expanded ? "lg:w-[13rem]" : "lg:w-14"
         )}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center justify-between border-b border-border px-6">
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <span className="text-sm font-bold text-primary-foreground">F</span>
+        <div className={cn(
+          "flex h-14 shrink-0 items-center border-b border-border/40",
+          expanded ? "px-3 justify-between" : "justify-center"
+        )}>
+          <Link to="/dashboard" className="flex items-center gap-2.5 min-w-0">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary">
+              <span className="text-xs font-bold text-primary-foreground">F</span>
             </div>
-            <span className="font-heading text-lg font-bold text-foreground">
-              FlowState
-            </span>
+            {expanded && (
+              <span className="font-heading text-sm font-semibold text-foreground whitespace-nowrap">
+                FlowState
+              </span>
+            )}
           </Link>
+          {/* Mobile close */}
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden"
-            onClick={() => setSidebarOpen(false)}
+            className="h-7 w-7 lg:hidden"
+            onClick={() => setMobileOpen(false)}
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </Button>
+          {/* Desktop pin toggle */}
+          {expanded && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden lg:flex h-6 w-6 text-muted-foreground/60 hover:text-muted-foreground"
+              onClick={togglePinned}
+              aria-label={pinned ? "Collapse sidebar" : "Pin sidebar"}
+            >
+              {pinned ? <ChevronsLeft className="h-3.5 w-3.5" /> : <ChevronsRight className="h-3.5 w-3.5" />}
+            </Button>
+          )}
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 space-y-1 px-3 py-4">
+        <nav className="flex-1 space-y-1.5 py-3 px-2 overflow-y-auto overflow-x-hidden">
           {navItems.map((item) => {
             const isActive =
               location.pathname === item.href ||
@@ -130,16 +174,31 @@ export default function DashboardLayout() {
               <Link
                 key={item.href}
                 to={item.href}
-                onClick={() => setSidebarOpen(false)}
+                onClick={() => setMobileOpen(false)}
+                title={!expanded ? item.label : undefined}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "group relative flex items-center h-9 rounded-md text-[13px] font-medium",
+                  "transition-colors duration-150 motion-reduce:transition-none",
+                  expanded
+                    ? "gap-2.5 pl-[11px] pr-2"
+                    : "justify-center",
                   isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                    ? cn("text-primary", expanded && "bg-primary/5")
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                 )}
               >
-                <item.icon className="h-5 w-5" />
-                {item.label}
+                {isActive && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-primary" />
+                )}
+                <item.icon className="h-[18px] w-[18px] shrink-0" />
+                {expanded && (
+                  <span className="whitespace-nowrap">{item.label}</span>
+                )}
+                {!expanded && (
+                  <span className="pointer-events-none absolute left-full ml-2 hidden rounded-md bg-popover px-2 py-1 text-xs font-medium text-popover-foreground shadow-md lg:group-hover:block whitespace-nowrap z-50">
+                    {item.label}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -147,26 +206,43 @@ export default function DashboardLayout() {
           {/* Admin-only nav items */}
           {isAdmin && (
             <>
-              <div className="my-3 border-t border-border" />
-              <p className="px-3 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Admin
-              </p>
+              <div className="!mt-3 border-t border-border/30 mx-1" />
+              {expanded && (
+                <p className="pl-[11px] py-1 text-[10px] font-semibold text-muted-foreground/50 uppercase tracking-wider">
+                  Admin
+                </p>
+              )}
               {adminNavItems.map((item) => {
                 const isActive = location.pathname.startsWith(item.href);
                 return (
                   <Link
                     key={item.href}
                     to={item.href}
-                    onClick={() => setSidebarOpen(false)}
+                    onClick={() => setMobileOpen(false)}
+                    title={!expanded ? item.label : undefined}
                     className={cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      "group relative flex items-center h-9 rounded-md text-[13px] font-medium",
+                      "transition-colors duration-150 motion-reduce:transition-none",
+                      expanded
+                        ? "gap-2.5 pl-[11px] pr-2"
+                        : "justify-center",
                       isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        ? cn("text-primary/80", expanded && "bg-primary/5")
+                        : "text-muted-foreground/65 hover:text-muted-foreground hover:bg-muted/20"
                     )}
                   >
-                    <item.icon className="h-5 w-5" />
-                    {item.label}
+                    {isActive && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-primary/70" />
+                    )}
+                    <item.icon className="h-[18px] w-[18px] shrink-0" />
+                    {expanded && (
+                      <span className="whitespace-nowrap">{item.label}</span>
+                    )}
+                    {!expanded && (
+                      <span className="pointer-events-none absolute left-full ml-2 hidden rounded-md bg-popover px-2 py-1 text-xs font-medium text-popover-foreground shadow-md lg:group-hover:block whitespace-nowrap z-50">
+                        {item.label}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -175,50 +251,68 @@ export default function DashboardLayout() {
         </nav>
 
         {/* User footer */}
-        <div className="border-t border-border p-4">
-          <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-              {profile?.display_name?.charAt(0).toUpperCase() || (session?.user.email?.charAt(0).toUpperCase() ?? "?")}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="truncate text-sm font-medium text-foreground">
-                  {profile?.display_name || session?.user.user_metadata?.full_name || session?.user.email}
-                </p>
-                {isAdmin && (
-                  <Badge variant="secondary" className="gap-1 text-[10px] px-1.5 py-0">
-                    <Shield className="h-2.5 w-2.5" />
-                    Admin
-                  </Badge>
-                )}
+        <div className={cn(
+          "shrink-0 border-t border-border/40",
+          expanded ? "p-2.5" : "py-3 flex justify-center"
+        )}>
+          {expanded ? (
+            <>
+              <div className="mb-1.5 flex items-center gap-2.5 pl-[3px]">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+                  {userInitial}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-[13px] font-medium text-foreground">
+                      {profile?.display_name || session?.user.user_metadata?.full_name || session?.user.email}
+                    </p>
+                    {isAdmin && (
+                      <Badge variant="secondary" className="gap-0.5 text-[8px] px-1 py-0">
+                        <Shield className="h-2 w-2" />
+                        Admin
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="truncate text-[10px] text-muted-foreground/70">
+                    {session?.user.email}
+                  </p>
+                </div>
               </div>
-              <p className="truncate text-xs text-muted-foreground">
-                {session?.user.email}
-              </p>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start gap-2 text-muted-foreground"
-            onClick={() => supabase.auth.signOut()}
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 text-muted-foreground/70 hover:text-muted-foreground h-7 text-[11px]"
+                onClick={() => supabase.auth.signOut()}
+              >
+                <LogOut className="h-3 w-3" />
+                Sign Out
+              </Button>
+            </>
+          ) : (
+            <button
+              onClick={() => supabase.auth.signOut()}
+              title="Sign Out"
+              className="group relative flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary transition-colors hover:bg-primary/15"
+            >
+              {userInitial}
+              <span className="pointer-events-none absolute left-full ml-2 hidden rounded-md bg-popover px-2 py-1 text-xs font-medium text-popover-foreground shadow-md lg:group-hover:block whitespace-nowrap z-50">
+                Sign Out
+              </span>
+            </button>
+          )}
         </div>
       </aside>
 
       {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="flex h-16 items-center justify-between border-b border-border px-4 lg:px-8">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4 lg:px-8">
           <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="icon"
               className="lg:hidden"
-              onClick={() => setSidebarOpen(true)}
+              onClick={() => setMobileOpen(true)}
             >
               <Menu className="h-5 w-5" />
             </Button>
@@ -227,7 +321,6 @@ export default function DashboardLayout() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {/* Search Button */}
             <Button
               variant="outline"
               size="sm"
@@ -272,7 +365,7 @@ export default function DashboardLayout() {
       {/* Ask AI Dialog */}
       <AskFlowState open={askAIOpen} onOpenChange={setAskAIOpen} />
 
-      {/* Floating AI Assistant Button - Music Equalizer Style */}
+      {/* Floating AI Assistant Button */}
       {!askAIOpen && (
         <button
           onClick={handleAIButtonClick}
@@ -281,7 +374,6 @@ export default function DashboardLayout() {
             buttonBursting && "animate-[buttonBurst_0.3s_ease-out_forwards]"
           )}
         >
-          {/* Burst rings that expand outward when clicked */}
           {buttonBursting && (
             <>
               <span className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-accent animate-[burstRing_0.4s_ease-out_forwards]" />
@@ -289,13 +381,8 @@ export default function DashboardLayout() {
               <span className="absolute inset-0 rounded-full bg-gradient-to-br from-accent to-primary animate-[burstRing_0.4s_ease-out_forwards]" style={{ animationDelay: '0.15s' }} />
             </>
           )}
-
-          {/* Glow ring */}
           <span className="absolute -inset-1 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 blur-md opacity-70 group-hover:opacity-100 transition-opacity" />
-
-          {/* Main button */}
           <span className="relative flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent">
-            {/* Animated equalizer bars */}
             <span className="flex items-end gap-[3px] h-6">
               <span className="w-[3px] bg-primary-foreground rounded-full animate-[equalize_2.8s_ease-in-out_infinite]" style={{ height: '40%', animationDelay: '0s' }} />
               <span className="w-[3px] bg-primary-foreground rounded-full animate-[equalize_2.2s_ease-in-out_infinite]" style={{ height: '70%', animationDelay: '0.5s' }} />

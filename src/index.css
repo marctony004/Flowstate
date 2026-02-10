@@ -242,6 +242,38 @@
     position: relative;
   }
 
+  /* Neural dot-field + faint arcs for brain-map canvas.
+     Uses ::before at very low opacity so content stays fully readable. */
+  .neural-field {
+    position: relative;
+  }
+  .neural-field::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0.04;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      /* Dot grid */
+      radial-gradient(circle, var(--muted-foreground) 0.75px, transparent 0.75px),
+      /* Curved arcs — top-left */
+      radial-gradient(ellipse at 20% 25%, transparent 140px, var(--muted-foreground) 141px, var(--muted-foreground) 142px, transparent 143px),
+      /* Bottom-right arc */
+      radial-gradient(ellipse at 80% 75%, transparent 100px, var(--muted-foreground) 101px, var(--muted-foreground) 102px, transparent 103px),
+      /* Center-left arc */
+      radial-gradient(ellipse at 10% 55%, transparent 200px, var(--muted-foreground) 201px, var(--muted-foreground) 202px, transparent 203px),
+      /* Top-right arc */
+      radial-gradient(ellipse at 85% 20%, transparent 170px, var(--muted-foreground) 171px, var(--muted-foreground) 172px, transparent 173px);
+    background-size:
+      28px 28px,
+      100% 100%,
+      100% 100%,
+      100% 100%,
+      100% 100%;
+  }
+
   /* Soft gradient backgrounds for sections */
   .studio-gradient-warm {
     background: linear-gradient(

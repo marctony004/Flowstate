@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
-  FolderKanban,
-  Lightbulb,
-  CheckSquare,
-  Users,
   Plus,
   ArrowRight,
   Clock,
@@ -14,8 +10,16 @@ import {
   Film,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
+import BrainMapCanvas, { type BrainNode } from "@/components/dashboard/BrainMapCanvas";
 import type { Project, Idea, Task, ActivityLog } from "@/types/database";
 
 const typeIcons: Record<string, typeof FileText> = {
@@ -46,12 +50,16 @@ function formatActivity(item: ActivityLog): string {
 
 export default function DashboardHomePage() {
   const { session } = useSession();
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activity, setActivity] = useState<ActivityLog[]>([]);
   const [collaboratorCount, setCollaboratorCount] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Node inspector state
+  const [inspectedNode, setInspectedNode] = useState<BrainNode | null>(null);
 
   const userId = session?.user.id;
 
@@ -108,37 +116,6 @@ export default function DashboardHomePage() {
     session?.user.email?.split("@")[0] ??
     "there";
 
-  const stats = [
-    {
-      label: "Active Projects",
-      value: projects.filter((p) => p.status === "active").length,
-      icon: FolderKanban,
-      href: "/dashboard/projects",
-      color: "text-primary",
-    },
-    {
-      label: "Ideas Captured",
-      value: ideas.length,
-      icon: Lightbulb,
-      href: "/dashboard/ideas",
-      color: "text-[var(--warning)]",
-    },
-    {
-      label: "Open Tasks",
-      value: tasks.length,
-      icon: CheckSquare,
-      href: "/dashboard/tasks",
-      color: "text-[var(--success)]",
-    },
-    {
-      label: "Collaborators",
-      value: collaboratorCount,
-      icon: Users,
-      href: "/dashboard/collaborators",
-      color: "text-[var(--accent)]",
-    },
-  ];
-
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -156,7 +133,7 @@ export default function DashboardHomePage() {
             Welcome back, {firstName}
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Here's what's happening with your projects.
+            Here's what's happening with your sessions.
           </p>
         </div>
         <Button asChild>
@@ -167,25 +144,80 @@ export default function DashboardHomePage() {
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Link
-            key={stat.label}
-            to={stat.href}
-            className="rounded-xl border border-border bg-card p-5 transition-colors hover:bg-accent/50"
-          >
-            <div className="flex items-center justify-between">
-              <stat.icon className={`h-5 w-5 ${stat.color}`} />
-              <span className="text-2xl font-bold text-foreground">
-                {stat.value}
-              </span>
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">{stat.label}</p>
-          </Link>
-        ))}
-      </div>
+      {/* Brain Map */}
+      <BrainMapCanvas
+        projectCount={projects.filter((p) => p.status === "active").length}
+        ideaCount={ideas.length}
+        taskCount={tasks.length}
+        collaboratorCount={collaboratorCount}
+        sessionTitle={projects[0]?.title}
+        onNodeClick={setInspectedNode}
+        onCenterClick={() => navigate("/dashboard/projects")}
+        onDismiss={() => setInspectedNode(null)}
+      />
 
+      {/* Node Inspector Sheet */}
+      <Sheet
+        open={!!inspectedNode}
+        onOpenChange={(open) => { if (!open) setInspectedNode(null); }}
+        modal={false}
+      >
+        <SheetContent
+          side="right"
+          overlayClassName="pointer-events-none"
+          onInteractOutside={(e) => {
+            const evt = e as CustomEvent<{ originalEvent: Event }>;
+            const target = evt.detail?.originalEvent?.target;
+            if (target instanceof HTMLElement && target.closest('[data-brainmap]')) {
+              e.preventDefault();
+            }
+          }}
+        >
+          {inspectedNode && (
+            <>
+              <SheetHeader>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="flex h-10 w-10 items-center justify-center rounded-full"
+                    style={{ backgroundColor: `color-mix(in srgb, ${inspectedNode.color} 15%, transparent)` }}
+                  >
+                    <inspectedNode.icon className="h-5 w-5" style={{ color: inspectedNode.color }} />
+                  </div>
+                  <div>
+                    <SheetTitle>{inspectedNode.label}</SheetTitle>
+                    <SheetDescription>{inspectedNode.sublabel}</SheetDescription>
+                  </div>
+                </div>
+              </SheetHeader>
+
+              <div className="px-4 py-2">
+                <ul className="space-y-3">
+                  {inspectedNode.details.map((detail, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: inspectedNode.color }} />
+                      {detail}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="mt-auto p-4">
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    navigate(inspectedNode.href);
+                    setInspectedNode(null);
+                  }}
+                >
+                  {inspectedNode.cta}
+                </Button>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Detail panels below the map */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Projects */}
         <div className="rounded-xl border border-border bg-card p-6">

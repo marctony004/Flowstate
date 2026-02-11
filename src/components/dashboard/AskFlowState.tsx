@@ -13,10 +13,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import {
   Mic,
-  MicOff,
   Send,
-  Volume2,
-  VolumeX,
   Loader2,
   Sparkles,
   Lightbulb,
@@ -28,12 +25,12 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Trash2,
+  Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "@/context/SessionContext";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
-import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
+import { useVapiAssistant, VapiStatus } from "@/hooks/useVapiAssistant";
 import supabase from "@/supabase";
 import { cn } from "@/lib/utils";
 import type { Json } from "@/types/database";
@@ -46,11 +43,19 @@ interface Citation {
   similarity: number;
 }
 
+interface ActionPerformed {
+  type: string;
+  entityType: string;
+  title: string;
+  id: string;
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   citations?: Citation[];
+  actions?: ActionPerformed[];
   timestamp: Date;
 }
 
@@ -71,35 +76,19 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
-  const [voiceOutputEnabled, setVoiceOutputEnabled] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Speech recognition (voice input)
+  // Vapi Assistant
   const {
-    isListening,
-    transcript,
-    interimTranscript,
-    isSupported: speechRecognitionSupported,
-    startListening,
-    stopListening,
-    resetTranscript,
-  } = useSpeechRecognition({
-    continuous: false,
-    interimResults: true,
-  });
+    status: vapiStatus,
+    isSpeechActive,
+    toggleCall,
+  } = useVapiAssistant(session?.user.id || "");
 
-  // Speech synthesis (voice output)
-  const {
-    isSpeaking,
-    isSupported: speechSynthesisSupported,
-    speak,
-    cancel: cancelSpeech,
-  } = useSpeechSynthesis({
-    rate: 1.0,
-    pitch: 1.0,
-  });
+  const isVapiActive = vapiStatus === VapiStatus.ACTIVE || vapiStatus === VapiStatus.CONNECTING;
+
 
   // Load chat history from database on first open
   useEffect(() => {
@@ -134,22 +123,12 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Update input when voice transcript changes
-  useEffect(() => {
-    if (transcript) {
-      setInputValue(transcript);
-    }
-  }, [transcript]);
-
   // Focus input when panel opens
   useEffect(() => {
     if (open && !isCollapsed) {
       setTimeout(() => inputRef.current?.focus(), 100);
     }
-    if (!open) {
-      cancelSpeech();
-    }
-  }, [open, isCollapsed, cancelSpeech]);
+  }, [open, isCollapsed]);
 
   // Save a message to the database (fire-and-forget)
   const persistMessage = useCallback(
@@ -183,7 +162,6 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
 
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
-    resetTranscript();
     setIsLoading(true);
 
     // Persist user message
@@ -211,6 +189,7 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
         role: "assistant",
         content: data.answer,
         citations: data.citations,
+        actions: data.actions,
         timestamp: new Date(),
       };
 
@@ -219,10 +198,6 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
       // Persist assistant message
       persistMessage(assistantMessage);
 
-      // Speak the response if voice output is enabled
-      if (voiceOutputEnabled && speechSynthesisSupported) {
-        speak(data.answer);
-      }
     } catch (err) {
       console.error("Ask FlowState error:", err);
       const errorMessage: Message = {
@@ -240,10 +215,6 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
     session?.user.id,
     isLoading,
     messages,
-    resetTranscript,
-    voiceOutputEnabled,
-    speechSynthesisSupported,
-    speak,
     persistMessage,
   ]);
 
@@ -255,14 +226,9 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
     }
   };
 
-  // Toggle voice input
+  // Toggle voice input (Vapi)
   const toggleListening = () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      resetTranscript();
-      startListening();
-    }
+    toggleCall();
   };
 
   // Clear chat history
@@ -279,7 +245,6 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
   // Close panel
   const handleClose = () => {
     setInputValue("");
-    resetTranscript();
     setIsCollapsed(false);
     onOpenChange(false);
   };
@@ -352,26 +317,7 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
                 <Trash2 className="h-4 w-4" />
               </Button>
             )}
-            {speechSynthesisSupported && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  if (isSpeaking) cancelSpeech();
-                  setVoiceOutputEnabled(!voiceOutputEnabled);
-                }}
-                className={cn(
-                  "h-8 w-8",
-                  voiceOutputEnabled ? "text-primary" : "text-muted-foreground"
-                )}
-              >
-                {voiceOutputEnabled ? (
-                  <Volume2 className="h-4 w-4" />
-                ) : (
-                  <VolumeX className="h-4 w-4" />
-                )}
-              </Button>
-            )}
+            {/* Voice output toggle removed as Vapi handles it */}
             <Button
               variant="ghost"
               size="icon"
@@ -398,17 +344,15 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
           <div className="flex flex-col items-center justify-center h-full text-center">
             <MessageSquare className="h-12 w-12 text-muted-foreground/30 mb-4" />
             <p className="text-sm font-medium text-foreground mb-2">
-              Ask me anything about your projects
+              Hey! I'm your creative assistant.
             </p>
             <p className="text-xs text-muted-foreground max-w-sm">
-              Try: "What tasks are due this week?" or "Tell me about my vocal
-              recording ideas"
+              Try: "What did we talk about last time?" or "Add an idea called
+              Midnight Groove" or "What tasks are due this week?"
             </p>
-            {speechRecognitionSupported && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Click the microphone to use voice input
-              </p>
-            )}
+            <p className="text-xs text-muted-foreground/60 mt-2">
+              Tap the mic for voice mode
+            </p>
           </div>
         ) : (
           messages.map((message) => (
@@ -433,6 +377,28 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
                 )}
               >
                 <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+
+                {/* Actions performed */}
+                {message.actions && message.actions.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-border/50">
+                    <div className="flex flex-wrap gap-1">
+                      {message.actions.map((action, idx) => {
+                        const Icon =
+                          entityIcons[action.entityType] || FolderKanban;
+                        return (
+                          <Badge
+                            key={idx}
+                            className="gap-1 text-xs bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/20"
+                          >
+                            <Plus className="h-3 w-3" />
+                            <Icon className="h-3 w-3" />
+                            {action.title}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Citations */}
                 {message.citations && message.citations.length > 0 && (
@@ -498,17 +464,15 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
       {/* Input Area */}
       <div className="border-t border-border p-3 animate-[staggerFadeUp_0.3s_ease-out_forwards]" style={{ animationDelay: '0.4s', opacity: 0 }}>
         {/* Voice feedback */}
-        {isListening && (
+        {isVapiActive && (
           <div className="mb-2 flex items-center gap-2 text-sm text-primary">
             <span className="relative flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
               <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
             </span>
-            Listening...
-            {interimTranscript && (
-              <span className="text-muted-foreground italic text-xs truncate max-w-[200px]">
-                {interimTranscript}
-              </span>
+            {vapiStatus === VapiStatus.CONNECTING ? "Connecting..." : "Voice Mode Active"}
+            {vapiStatus === VapiStatus.ACTIVE && isSpeechActive && (
+              <span className="text-muted-foreground italic text-xs ml-2"> (Speaking)</span>
             )}
           </div>
         )}
@@ -521,32 +485,31 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={
-                isListening
-                  ? "Listening..."
+                isVapiActive
+                  ? "Voice mode active..."
                   : "Ask about your projects, ideas, or tasks..."
               }
               rows={1}
               className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
-              disabled={isLoading || isListening}
+              disabled={isLoading || isVapiActive}
             />
           </div>
 
           {/* Voice input button */}
-          {speechRecognitionSupported && (
-            <Button
-              variant={isListening ? "default" : "outline"}
-              size="icon"
-              onClick={toggleListening}
-              disabled={isLoading}
-              className={cn("h-9 w-9", isListening && "bg-red-500 hover:bg-red-600")}
-            >
-              {isListening ? (
-                <MicOff className="h-4 w-4" />
-              ) : (
-                <Mic className="h-4 w-4" />
-              )}
-            </Button>
-          )}
+          <Button
+            variant={isVapiActive ? "default" : "outline"}
+            size="icon"
+            onClick={toggleListening}
+            disabled={isLoading || vapiStatus === VapiStatus.LOADING}
+            className={cn("h-9 w-9", isVapiActive && "bg-green-500 hover:bg-green-600")}
+            title={isVapiActive ? "Stop Voice Mode" : "Start Voice Mode"}
+          >
+            {isVapiActive ? (
+              <Mic className="h-4 w-4 animate-pulse" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+          </Button>
 
           {/* Send button */}
           <Button
@@ -563,21 +526,7 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
           </Button>
         </div>
 
-        {/* Speaking indicator */}
-        {isSpeaking && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-            <Volume2 className="h-3 w-3 animate-pulse" />
-            Speaking...
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-5 px-2 text-xs"
-              onClick={cancelSpeech}
-            >
-              Stop
-            </Button>
-          </div>
-        )}
+        {/* Speaking indicator removed / replaced by Vapi status */}
       </div>
     </div>
   );

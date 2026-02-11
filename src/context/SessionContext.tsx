@@ -33,12 +33,16 @@ export const SessionProvider = ({ children }: Props) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    setProfile(data);
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      setProfile(data);
+    } catch {
+      setProfile(null);
+    }
   };
 
   const refreshProfile = async () => {
@@ -48,20 +52,32 @@ export const SessionProvider = ({ children }: Props) => {
   };
 
   useEffect(() => {
-    const authStateListener = supabase.auth.onAuthStateChange(
-      async (_, session) => {
+    // Explicitly get the initial session — this is the primary path
+    // that resolves the loading state on page refresh.
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      setSession(session);
+      if (session?.user.id) {
+        await fetchProfile(session.user.id);
+      }
+      setIsLoading(false);
+    }).catch(() => {
+      setIsLoading(false);
+    });
+
+    // Listen for subsequent auth changes (sign-in, sign-out, token refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
         setSession(session);
         if (session?.user.id) {
           await fetchProfile(session.user.id);
         } else {
           setProfile(null);
         }
-        setIsLoading(false);
       }
     );
 
     return () => {
-      authStateListener.data.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 

@@ -14,6 +14,7 @@ const AuthProtectedRoute = () => {
 
     // Retry a few times in case the profile trigger hasn't fired yet
     let attempts = 0;
+    let cancelled = false;
     const check = () => {
       supabase
         .from("profiles")
@@ -21,15 +22,19 @@ const AuthProtectedRoute = () => {
         .eq("id", session!.user.id)
         .single()
         .then(({ data, error }) => {
+          if (cancelled) return;
           if (error && attempts < 3) {
             attempts++;
             setTimeout(check, 500);
           } else {
-            setOnboarded(!!data?.onboarded_at);
+            // After retries exhausted, treat as onboarded to avoid infinite spinner
+            setOnboarded(error ? true : !!data?.onboarded_at);
           }
         });
     };
     check();
+
+    return () => { cancelled = true; };
   }, [session?.user.id]);
 
   if (!session) {

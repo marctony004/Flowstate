@@ -22,7 +22,7 @@
 | Route protection by role | ☑ | `admin/UsersPage.tsx` | Access denied for non-admins |
 | **Test credentials in write-up** | ☐ | — | Create admin test account |
 
-**Cross-reference:** See MVP Checklist Phase 7 (Forms & Lead Capture)
+**Score estimate:** 14/15 (just need test credentials documented)
 
 ---
 
@@ -39,7 +39,7 @@
 | Data persists in Supabase `profiles` table | ☑ | `profiles` table | All fields saved |
 | Changes persist after refresh | ☑ | `refreshProfile()` | Context updated on save |
 
-**Cross-reference:** See MVP Checklist Phase 7B.2 (may need new SettingsPage features)
+**Score estimate:** 10/10
 
 ---
 
@@ -47,24 +47,24 @@
 
 | Item | Status | FlowState Location | Notes |
 |------|--------|-------------------|-------|
-| PostgreSQL schema with 3+ tables | ☑ | Supabase | projects, ideas, tasks, collaborators, embeddings, activity_log, etc. |
-| Row Level Security (RLS) enabled | ☑ | Supabase | Policies on main tables |
-| Proper foreign key relationships | ☑ | Supabase | owner_id, project_id references |
+| PostgreSQL schema with 3+ tables | ☑ | Supabase | 9 tables total |
+| Row Level Security (RLS) enabled | ☑ | Supabase | All tables have RLS on |
+| Proper foreign key relationships | ☑ | Supabase | owner_id, project_id, etc. |
 | pgvector extension enabled | ☑ | Supabase | For embeddings table |
 | Schema diagram in write-up | ☐ | — | Create for documentation |
 
-**Tables in FlowState:**
-- `profiles` - user profiles
-- `projects` - music projects
-- `ideas` - creative ideas
-- `tasks` - project tasks
-- `collaborators` - external collaborators
-- `embeddings` - vector embeddings (pgvector)
-- `activity_log` - user activity tracking
-- `milestones` - project milestones
-- `project_members` - team members
+**Tables in FlowState (9 total):**
+- `profiles` - user profiles (1 row, RLS ☑)
+- `projects` - music projects (2 rows, RLS ☑)
+- `ideas` - creative ideas (6 rows, RLS ☑)
+- `tasks` - project tasks (1 row, RLS ☑)
+- `collaborator_notes` - external collaborators (1 row, RLS ☑)
+- `embeddings` - vector embeddings / pgvector (7 rows, RLS ☑)
+- `activity_log` - user activity tracking (14 rows, RLS ☑)
+- `milestones` - project milestones (0 rows, RLS ☑)
+- `project_members` - team members (0 rows, RLS ☑)
 
-**Cross-reference:** See MVP Checklist Phase 8A.2 (Semantic Search infrastructure)
+**Score estimate:** 9/10 (just need schema diagram)
 
 ---
 
@@ -86,7 +86,7 @@
 |-----------|---------------|---------|
 | ☑ `GradientText` | HeroSection, HowItWorksSection, PricingSection, SocialProofSection, BenefitsSection | Animated gradient text for headings |
 | ☑ `BlurText` | HeroSection | Text reveal animation on page load |
-| ☑ `Aurora` | HeroSection | Animated aurora background effect |
+| ☑ `Aurora` | Created in `src/components/reactbits/Aurora.tsx` | Animated aurora background (available) |
 | ☑ `StarBorder` | FinalCTASection | Animated star border on CTA buttons |
 | ☑ `CountUp` | SocialProofSection | Animated number counting (stats) |
 | ☑ `SpotlightCard` | SocialProofSection | Cards with spotlight hover effect |
@@ -94,7 +94,7 @@
 
 **Component Files:** `src/components/reactbits/`
 
-**Cross-reference:** See MVP Checklist Phase 4 (Solution, Features & Social Proof)
+**Score estimate:** 14/15 (just need to document in write-up)
 
 ---
 
@@ -102,18 +102,19 @@
 
 | Item | Status | FlowState Location | Notes |
 |------|--------|-------------------|-------|
-| At least 1 Edge Function deployed | ☑ | Supabase | Multiple deployed |
-| Meaningful operation | ☑ | — | AI/NLP operations |
-| Proper error handling | ☑ | — | Try/catch, error responses |
+| At least 1 Edge Function deployed | ☑ | Supabase | 4 deployed and ACTIVE |
+| Meaningful operation | ☑ | — | AI/NLP embedding + search + chat + parsing |
+| Proper error handling | ☑ | — | Try/catch, error responses, CORS headers |
 | Secure API key handling | ☑ | Supabase secrets | GEMINI_API_KEY in env |
 | Document in write-up | ☐ | — | List all functions |
 
-**Deployed Edge Functions:**
-- ☑ `generate-embedding` - Generates vector embeddings via Gemini API
-- ☑ `semantic-search` - Performs pgvector similarity search
-- ☑ `ask-flowstate` - RAG chatbot with context retrieval + answer generation
+**Deployed Edge Functions (4 total - all ACTIVE):**
+- ☑ `generate-embedding` - Generates vector embeddings via Gemini text-embedding-004
+- ☑ `semantic-search` - Performs pgvector similarity search across user content
+- ☑ `ask-flowstate` - RAG chatbot: embeds question → retrieves context → Gemini 1.5 Flash generates answer (v12)
+- ☑ `parse-task-nl` - Natural language task parsing via Gemini
 
-**Cross-reference:** See MVP Checklist Phase 8A (AI/NLP Intelligence Layer)
+**Score estimate:** 9/10 (just need to document)
 
 ---
 
@@ -130,7 +131,7 @@
 - ☑ `magic` - 21st.dev Magic MCP for UI components
 - ☑ `reactbits` - ReactBits MCP for animated components
 
-**Cross-reference:** Project uses MCPs for development workflow
+**Score estimate:** 9/10 (just need to document)
 
 ---
 
@@ -139,28 +140,28 @@
 | Item | Status | FlowState Location | Notes |
 |------|--------|-------------------|-------|
 | pgvector extension enabled | ☑ | Supabase | Extension active |
-| Embeddings table with vector column | ☑ | `embeddings` table | vector(768) column |
-| Content ingestion pipeline | ☑ | `useEmbedding` hook | Auto-generates on create/update |
+| Embeddings table with vector column | ☑ | `embeddings` table | vector(768), 6 rows stored, user_id column added |
+| Content ingestion pipeline | ☑ | `useEmbedding` hook | Auto-generates on create/update in IdeaDialog, TaskDialog, ProjectDialog |
 | Embedding generation via API | ☑ | `generate-embedding` Edge Function | Gemini text-embedding-004 |
-| Similarity search function | ☑ | `search_embeddings` SQL function | Cosine similarity, top-k |
-| Chat interface UI | ☑ | `AskFlowState.tsx` | Side panel with messages |
-| Retrieves context via pgvector | ☑ | `ask-flowstate` Edge Function | Searches embeddings first |
-| Sends context + question to LLM | ⚠️ | `ask-flowstate` | Currently rule-based (Gemini chat failing) |
+| Similarity search function | ☑ | `search_embeddings` SQL RPC | Cosine similarity, top-k |
+| Chat interface UI | ☑ | `AskFlowState.tsx` | Side panel with voice I/O |
+| Retrieves context via pgvector | ☑ | `ask-flowstate` Edge Function | Searches embeddings, enriches with entity metadata |
+| Sends context + question to LLM | ☑ | `ask-flowstate` Edge Function | Gemini 1.5 Flash with system prompt + conversation history |
 | Chat history displayed in UI | ☑ | `AskFlowState.tsx` | Messages array in state |
-| Chat history stored in database | ☐ | — | Optional, not implemented |
+| Chat history stored in database | ☐ | — | Currently in-memory only |
 | Example questions in write-up | ☐ | — | Document 3+ examples |
 
-**RAG Pipeline:**
-1. User asks question in AskFlowState panel
-2. Question embedded via Gemini text-embedding-004
-3. pgvector similarity search finds relevant ideas/projects/tasks
-4. Context enriched with full entity details
-5. Smart answer generated based on question type + context
+**RAG Pipeline (fully functional):**
+1. User asks question in AskFlowState panel (supports voice input)
+2. `ask-flowstate` edge function embeds question via Gemini text-embedding-004
+3. pgvector `search_embeddings` RPC finds relevant ideas/projects/tasks
+4. Context enriched with full entity details from source tables
+5. Gemini 1.5 Flash generates answer with system prompt + conversation history
 6. Response displayed with source citations
 
-**Known Issue:** Gemini chat API not working; using rule-based `generateSmartAnswer` instead. Consider switching to OpenAI/Claude for production.
+**Bug Fixed:** ~~`embeddings` table was missing `user_id` column~~ — Added `user_id uuid` column via migration, backfilled 6 rows from entity owners, deleted 1 orphan. `search_embeddings` RPC optimized to filter on `embeddings.user_id` directly. `generate-embedding` edge function (v3) now resolves and stores `user_id`. `ask-flowstate` edge function (v13) now uses **real Gemini 1.5 Flash** for answer generation (was previously rule-based pattern matching).
 
-**Cross-reference:** See MVP Checklist Phase 8A.3 (Personal Creative Memory / Session Recall)
+**Score estimate:** 18/20 (optionally persist chat history for full marks)
 
 ---
 
@@ -172,10 +173,12 @@
 | Requirements mapping table | ☐ | Map each requirement to location |
 | Testing instructions per requirement | ☐ | Step-by-step guide |
 | Test credentials provided | ☐ | Admin + member accounts |
-| 21st.dev/ReactBits components listed | ☐ | With locations |
-| Edge Functions documented | ☐ | Names + descriptions |
+| 21st.dev/ReactBits components listed | ☐ | 7 components with locations |
+| Edge Functions documented | ☐ | 4 functions: names + descriptions |
 | MCP servers documented | ☐ | Which ones + how to test |
 | 3+ RAG chatbot example questions | ☐ | Questions that work well |
+
+**Score estimate:** 0/10 (not started)
 
 ---
 
@@ -194,22 +197,45 @@
 
 ## Priority Action Items
 
-### Critical (Must Have for Submission)
-1. ☑ **Add user roles** - `is_admin` column + admin nav + user management page
-2. ☑ **Editable profile page** - Avatar, display name, bio, timezone with validation
-3. ☑ **Document 4 UI components** - 7 ReactBits components identified and documented
-4. ☑ **Deploy to Netlify** - https://flowstateos.netlify.app/
-5. ☐ **Write one-page PDF** - Testing guide document
+### CRITICAL — FIXED
+1. ☑ ~~**Fix embeddings `user_id` column**~~ — Migration applied: added `user_id uuid`, backfilled 6 rows, deleted 1 orphan, index created. `search_embeddings` RPC optimized. `generate-embedding` v3 stores user_id. **`ask-flowstate` v13 now uses real Gemini 1.5 Flash** (was rule-based).
 
-### Important (Strong Submission)
-6. ☐ **Fix RAG LLM integration** - Switch from rule-based to actual LLM (OpenAI/Claude)
-7. ☐ **Store chat history** - Save conversations to database
-8. ☑ **Role-based UI** - Admin nav section + User Management page
-9. ☐ **Schema diagram** - Visual for write-up
+### Required for Submission
+2. ☐ **Write one-page PDF** — Testing guide with credentials, requirement mapping, example questions
+3. ☐ **Create test accounts** — Admin + regular user accounts with credentials for grader
 
-### Nice to Have
-10. ☐ **Revisit semantic search fine-tuning** - Improve match quality
-11. ☐ **Additional MCP integrations** - Show more MCP value
+### Recommended (Strengthen Submission)
+4. ☐ **Persist chat history** — Create `chat_messages` table, save conversations from AskFlowState
+5. ☐ **Create schema diagram** — Visual ER diagram for write-up
+
+### Already Complete
+- ☑ User roles + admin UI
+- ☑ Editable profile (name, bio, avatar, timezone, role)
+- ☑ 7 ReactBits components integrated
+- ☑ 4 Edge Functions deployed (generate-embedding v3, semantic-search, ask-flowstate v13, parse-task-nl)
+- ☑ RAG chatbot UI with voice I/O
+- ☑ LLM integration — Gemini 1.5 Flash for answer generation (v13)
+- ☑ Embedding pipeline hooked into entity CRUD
+- ☑ Semantic search verified end-to-end (user_id filtering works)
+- ☑ Deployed to Netlify
+
+---
+
+## Estimated Score (Current State)
+
+| Requirement | Points | Estimate | Notes |
+|-------------|--------|----------|-------|
+| 1. Auth & Roles | 15 | 14 | Need test credentials in write-up |
+| 2. Profile | 10 | 10 | Complete |
+| 3. Database | 10 | 9 | Need schema diagram |
+| 4. UI Components | 15 | 14 | Need to list in write-up |
+| 5. Edge Functions | 10 | 9 | Need to document |
+| 6. MCP Integration | 10 | 9 | Need to document |
+| 7. RAG Chatbot | 20 | 18 | user_id fixed, LLM integrated, optionally persist chat |
+| 8. Write-Up | 10 | 0 | Not started |
+| **Total** | **100** | **83–87** | |
+
+**After writing PDF: ~93–97/100**
 
 ---
 
@@ -226,22 +252,23 @@ FlowState is a Creative Intelligence OS designed for musicians and producers. It
 
 | Req | How to Test |
 |-----|-------------|
-| 1. Auth & Roles | Sign up → Log in → Check role-based UI → Log out |
-| 2. Profile | Settings → Edit name/bio → Save → Refresh → Verify |
-| 3. Database | Create project → Create idea → Verify in dashboard |
-| 4. UI Components | [List locations of 4 components] |
-| 5. Edge Functions | Ask FlowState question → Triggers embedding + search |
-| 6. MCP | Used Supabase MCP, Magic MCP, ReactBits MCP in development |
-| 7. RAG Chatbot | Click AI button → Ask "How many projects do I have?" |
+| 1. Auth & Roles | Sign up → Log in → Check admin nav (admin only) → Visit User Management → Log out |
+| 2. Profile | Settings → Edit display name, bio, avatar URL → Save → Refresh → Verify persistence |
+| 3. Database | Create project → Create idea → Create task → Check dashboard counts update |
+| 4. UI Components | Landing page: GradientText headings, BlurText hero, CountUp stats, SpotlightCard testimonials, GlareHover benefits, StarBorder CTA |
+| 5. Edge Functions | Create an idea → embedding auto-generated. Ask AI a question → triggers ask-flowstate function |
+| 6. MCP | Used Supabase MCP, Magic MCP (21st.dev), ReactBits MCP during development |
+| 7. RAG Chatbot | Click floating AI button → Ask "What ideas have I captured?" → See answer with citations |
 
 ### RAG Chatbot Example Questions
 1. "How many ideas do I have?"
 2. "What projects am I working on?"
-3. "What tasks are linked to my rap song project?"
+3. "What tasks are linked to my project?"
+4. "Summarize my recent activity"
 
 ---
 
-**Document Version:** 1.2
-**Last Updated:** February 5, 2026
-**Status:** In Progress (4/5 Critical Items Complete)
+**Document Version:** 3.0
+**Last Updated:** February 10, 2026
+**Status:** In Progress — Critical bug FIXED. Remaining: write-up PDF + test accounts + optional chat persistence
 **Live URL:** https://flowstateos.netlify.app/

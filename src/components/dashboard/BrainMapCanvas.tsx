@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence, type Variants, useReducedMotion } from "framer-motion";
 import {
   FolderKanban,
@@ -342,20 +342,24 @@ export default function BrainMapCanvas({
   const centerFocused = focusedId === "center";
   const peripheralFocused = hasFocus && !centerFocused;
 
+  // Hover is a preview state — suppressed while click-locked
+  const handleHover = useCallback((id: string | null) => {
+    if (clickedId !== null) return;
+    setHoveredId(id);
+  }, [clickedId]);
+
   // --- Click handlers ---
 
   const handlePeripheralClick = (node: BrainNode) => {
+    // Already focused on this exact node — do nothing (prevents animation churn)
+    if (clickedId === node.id) return;
+
+    // New target — clear any pending inspector timer
     if (inspectTimerRef.current) clearTimeout(inspectTimerRef.current);
 
     // Reduced motion: no camera move, open inspector immediately
     if (reducedMotion) {
       setClickedId(node.id);
-      onNodeClick(node);
-      return;
-    }
-
-    // Already focused on this exact node — open/re-open inspector immediately
-    if (clickedId === node.id) {
       onNodeClick(node);
       return;
     }
@@ -558,7 +562,11 @@ export default function BrainMapCanvas({
                       opacity: centerFocused ? [0.7, 0.5, 0.65] : [0.5, 0.3, 0.5],
                     }
               }
-              transition={{ duration: centerFocused ? 2 : 5, repeat: Infinity, ease: "easeInOut" }}
+              transition={
+                reducedMotion
+                  ? { duration: 0 }
+                  : { duration: centerFocused ? 2 : 5, repeat: Infinity, ease: "easeInOut" }
+              }
             />
 
             {/* Halo ring — slow radial pulse */}
@@ -578,7 +586,11 @@ export default function BrainMapCanvas({
                       scale: [1, 1.06, 1],
                     }
               }
-              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+              transition={
+                reducedMotion
+                  ? { duration: 0 }
+                  : { duration: 8, repeat: Infinity, ease: "easeInOut" }
+              }
             />
 
             {/* Halo settle tighten — one-shot, fires after camera nearly settles */}
@@ -605,7 +617,7 @@ export default function BrainMapCanvas({
               ideaCount={ideaCount}
               onCenterClick={handleCenterClick}
               focusedId={focusedId}
-              setHoveredId={setHoveredId}
+              setHoveredId={handleHover}
               reducedMotion={reducedMotion}
             />
           </div>
@@ -619,7 +631,7 @@ export default function BrainMapCanvas({
               focusedId={focusedId}
               clickedId={clickedId}
               settlePulseId={settlePulseId}
-              setHoveredId={setHoveredId}
+              setHoveredId={handleHover}
               onNodeClick={handlePeripheralClick}
               reducedMotion={reducedMotion}
             />

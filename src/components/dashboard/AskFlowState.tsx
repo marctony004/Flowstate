@@ -45,7 +45,8 @@ interface Citation {
 
 interface ActionPerformed {
   type: string;
-  entityType: string;
+  entityType?: string;
+  action?: string;
   title: string;
   id: string;
 }
@@ -185,12 +186,17 @@ export default function AskFlowState({ open, onOpenChange, onAction }: AskFlowSt
 
       if (error) throw error;
 
+      // Debug: log actions from edge function
+      if (data.actions?.length) {
+        console.log("[AskFlowState] Actions received:", data.actions);
+      }
+
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
         content: data.answer,
         citations: data.citations,
-        actions: data.actions,
+        actions: data.actions && data.actions.length > 0 ? data.actions : undefined,
         timestamp: new Date(),
       };
 
@@ -391,13 +397,18 @@ export default function AskFlowState({ open, onOpenChange, onAction }: AskFlowSt
                   <div className="mt-2 pt-2 border-t border-border/50">
                     <div className="flex flex-wrap gap-1">
                       {message.actions.map((action, idx) => {
-                        const Icon =
-                          entityIcons[action.entityType] || FolderKanban;
+                        const entityType = action.type || action.entityType || "project";
+                        const Icon = entityIcons[entityType] || FolderKanban;
                         return (
                           <Badge
                             key={idx}
-                            className="gap-1 text-xs bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/20 animate-[actionPing_0.5s_ease-out_forwards]"
-                            style={{ animationDelay: `${idx * 0.1}s` }}
+                            className="gap-1 text-xs border"
+                            style={{
+                              backgroundColor: "rgba(34, 197, 94, 0.12)",
+                              color: "rgb(34, 197, 94)",
+                              borderColor: "rgba(34, 197, 94, 0.25)",
+                              animation: `actionPing 0.5s ease-out ${idx * 0.1}s both`,
+                            }}
                           >
                             <Plus className="h-3 w-3" />
                             <Icon className="h-3 w-3" />

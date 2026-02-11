@@ -62,6 +62,7 @@ interface Message {
 interface AskFlowStateProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAction?: () => void;
 }
 
 const entityIcons: Record<string, typeof Lightbulb> = {
@@ -70,7 +71,7 @@ const entityIcons: Record<string, typeof Lightbulb> = {
   project: FolderKanban,
 };
 
-export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) {
+export default function AskFlowState({ open, onOpenChange, onAction }: AskFlowStateProps) {
   const { session } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -197,6 +198,11 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
 
       // Persist assistant message
       persistMessage(assistantMessage);
+
+      // Notify parent about performed actions (for button glow)
+      if (data.actions && data.actions.length > 0 && onAction) {
+        onAction();
+      }
 
     } catch (err) {
       console.error("Ask FlowState error:", err);
@@ -388,7 +394,8 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
                         return (
                           <Badge
                             key={idx}
-                            className="gap-1 text-xs bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/20"
+                            className="gap-1 text-xs bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/20 animate-[actionPing_0.5s_ease-out_forwards]"
+                            style={{ animationDelay: `${idx * 0.1}s` }}
                           >
                             <Plus className="h-3 w-3" />
                             <Icon className="h-3 w-3" />

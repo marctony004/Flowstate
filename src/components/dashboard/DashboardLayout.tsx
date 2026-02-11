@@ -85,6 +85,7 @@ export default function DashboardLayout() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [askAIOpen, setAskAIOpen] = useState(false);
   const [buttonBursting, setButtonBursting] = useState(false);
+  const [actionGlow, setActionGlow] = useState(false);
 
   const expanded = pinned || hovered;
 
@@ -95,6 +96,12 @@ export default function DashboardLayout() {
       setTimeout(() => setButtonBursting(false), 100);
     }, 200);
   };
+
+  // Triggered when AskFlowState performs an action (create idea/task/project)
+  const handleAIAction = useCallback(() => {
+    setActionGlow(true);
+    setTimeout(() => setActionGlow(false), 800);
+  }, []);
 
   const openSearch = useCallback(() => setSearchOpen(true), []);
   useSearchShortcut(openSearch);
@@ -365,7 +372,7 @@ export default function DashboardLayout() {
       <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
 
       {/* Ask AI Dialog */}
-      <AskFlowState open={askAIOpen} onOpenChange={setAskAIOpen} />
+      <AskFlowState open={askAIOpen} onOpenChange={setAskAIOpen} onAction={handleAIAction} />
 
       {/* Floating AI Assistant Button */}
       {!askAIOpen && (
@@ -373,7 +380,8 @@ export default function DashboardLayout() {
           onClick={handleAIButtonClick}
           className={cn(
             "group fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl hover:shadow-primary/25 transition-all duration-300 hover:scale-110",
-            buttonBursting && "animate-[buttonBurst_0.3s_ease-out_forwards]"
+            buttonBursting && "animate-[buttonBurst_0.3s_ease-out_forwards]",
+            actionGlow && "animate-[successGlow_0.8s_ease-out_forwards]"
           )}
         >
           {buttonBursting && (
@@ -382,6 +390,10 @@ export default function DashboardLayout() {
               <span className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-accent animate-[burstRing_0.4s_ease-out_forwards]" style={{ animationDelay: '0.1s' }} />
               <span className="absolute inset-0 rounded-full bg-gradient-to-br from-accent to-primary animate-[burstRing_0.4s_ease-out_forwards]" style={{ animationDelay: '0.15s' }} />
             </>
+          )}
+          {/* Green glow ring when action was just performed */}
+          {actionGlow && (
+            <span className="absolute -inset-1 rounded-full bg-green-500/40 blur-md animate-[burstRing_0.8s_ease-out_forwards]" />
           )}
           <span className="absolute -inset-1 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 blur-md opacity-70 group-hover:opacity-100 transition-opacity" />
           <span className="relative flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent">

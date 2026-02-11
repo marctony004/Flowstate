@@ -17,6 +17,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Mic,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +33,7 @@ const navItems = [
   { label: "Ideas", href: "/dashboard/ideas", icon: Mic },
   { label: "Tasks", href: "/dashboard/tasks", icon: CheckSquare },
   { label: "Collaborators", href: "/dashboard/collaborators", icon: Users },
+  { label: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 

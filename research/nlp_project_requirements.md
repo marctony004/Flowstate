@@ -15,7 +15,7 @@
 | Sign-up form with email/password via Supabase Auth | ☑ | `/auth/sign-up` - `SignUpPage.tsx` | Password strength meter included |
 | Login form with email/password | ☑ | `/auth/sign-in` - `SignInPage.tsx` | Working with Supabase Auth |
 | Logout functionality | ☑ | `DashboardLayout.tsx` sidebar | Sign Out button in user footer |
-| Session persistence (refresh doesn't log out) | ☑ | `SessionContext.tsx` | `onAuthStateChange` listener |
+| Session persistence (refresh doesn't log out) | ☑ | `SessionContext.tsx` | `getSession()` + `onAuthStateChange` (fixed infinite spinner bug) |
 | User roles stored in database | ☑ | `is_admin` column in `profiles` | Boolean for admin access |
 | At least 2 distinct user roles | ☑ | `SessionContext.tsx` | Admin vs regular user |
 | Conditional rendering based on role | ☑ | `DashboardLayout.tsx` | Admin nav section, badge |
@@ -54,15 +54,15 @@
 | Schema diagram in write-up | ☐ | — | Create for documentation |
 
 **Tables in FlowState (9 total):**
-- `profiles` - user profiles (1 row, RLS ☑)
-- `projects` - music projects (2 rows, RLS ☑)
-- `ideas` - creative ideas (6 rows, RLS ☑)
-- `tasks` - project tasks (1 row, RLS ☑)
-- `collaborator_notes` - external collaborators (1 row, RLS ☑)
-- `embeddings` - vector embeddings / pgvector (7 rows, RLS ☑)
-- `activity_log` - user activity tracking (14 rows, RLS ☑)
-- `milestones` - project milestones (0 rows, RLS ☑)
-- `project_members` - team members (0 rows, RLS ☑)
+- `profiles` - user profiles (RLS ☑)
+- `projects` - music projects (RLS ☑)
+- `ideas` - creative ideas (RLS ☑)
+- `tasks` - project tasks (RLS ☑)
+- `collaborator_notes` - external collaborators (RLS ☑)
+- `embeddings` - vector embeddings / pgvector, 11 rows (RLS ☑)
+- `activity_log` - user activity tracking, 17 rows (RLS ☑)
+- `milestones` - project milestones (RLS ☑)
+- `project_members` - team members (RLS ☑)
 
 **Score estimate:** 9/10 (just need schema diagram)
 
@@ -102,19 +102,20 @@
 
 | Item | Status | FlowState Location | Notes |
 |------|--------|-------------------|-------|
-| At least 1 Edge Function deployed | ☑ | Supabase | 4 deployed and ACTIVE |
-| Meaningful operation | ☑ | — | AI/NLP embedding + search + chat + parsing |
+| At least 1 Edge Function deployed | ☑ | Supabase | 5 deployed and ACTIVE |
+| Meaningful operation | ☑ | — | AI/NLP embedding + search + chat + parsing + batch regen |
 | Proper error handling | ☑ | — | Try/catch, error responses, CORS headers |
 | Secure API key handling | ☑ | Supabase secrets | GEMINI_API_KEY in env |
 | Document in write-up | ☐ | — | List all functions |
 
-**Deployed Edge Functions (4 total - all ACTIVE):**
-- ☑ `generate-embedding` - Generates vector embeddings via Gemini text-embedding-004
-- ☑ `semantic-search` - Performs pgvector similarity search across user content
-- ☑ `ask-flowstate` - RAG chatbot: embeds question → retrieves context → Gemini 1.5 Flash generates answer (v12)
-- ☑ `parse-task-nl` - Natural language task parsing via Gemini
+**Deployed Edge Functions (5 total - all ACTIVE):**
+- ☑ `generate-embedding` v4 — Generates vector embeddings via Gemini gemini-embedding-001 (768d)
+- ☑ `semantic-search` v3 — Performs pgvector similarity search across user content
+- ☑ `ask-flowstate` v17 — RAG chatbot: embeds question → retrieves context → Gemini 2.5 Flash generates answer
+- ☑ `parse-task-nl` v3 — Natural language task parsing via Gemini
+- ☑ `regenerate-embeddings` v1 — Batch re-embeds all entities for a user (model migration utility)
 
-**Score estimate:** 9/10 (just need to document)
+**Score estimate:** 10/10
 
 ---
 
@@ -140,26 +141,30 @@
 | Item | Status | FlowState Location | Notes |
 |------|--------|-------------------|-------|
 | pgvector extension enabled | ☑ | Supabase | Extension active |
-| Embeddings table with vector column | ☑ | `embeddings` table | vector(768), 6 rows stored, user_id column added |
+| Embeddings table with vector column | ☑ | `embeddings` table | vector(768), 11 rows (7 ideas, 3 projects, 1 task), user_id column added |
 | Content ingestion pipeline | ☑ | `useEmbedding` hook | Auto-generates on create/update in IdeaDialog, TaskDialog, ProjectDialog |
-| Embedding generation via API | ☑ | `generate-embedding` Edge Function | Gemini text-embedding-004 |
+| Embedding generation via API | ☑ | `generate-embedding` Edge Function v4 | Gemini gemini-embedding-001 (768d) |
 | Similarity search function | ☑ | `search_embeddings` SQL RPC | Cosine similarity, top-k |
 | Chat interface UI | ☑ | `AskFlowState.tsx` | Side panel with voice I/O |
 | Retrieves context via pgvector | ☑ | `ask-flowstate` Edge Function | Searches embeddings, enriches with entity metadata |
-| Sends context + question to LLM | ☑ | `ask-flowstate` Edge Function | Gemini 1.5 Flash with system prompt + conversation history |
+| Sends context + question to LLM | ☑ | `ask-flowstate` Edge Function v17 | Gemini 2.5 Flash with system prompt + conversation history |
 | Chat history displayed in UI | ☑ | `AskFlowState.tsx` | Messages array in state |
 | Chat history stored in database | ☐ | — | Currently in-memory only |
 | Example questions in write-up | ☐ | — | Document 3+ examples |
 
-**RAG Pipeline (fully functional):**
-1. User asks question in AskFlowState panel (supports voice input)
-2. `ask-flowstate` edge function embeds question via Gemini text-embedding-004
-3. pgvector `search_embeddings` RPC finds relevant ideas/projects/tasks
+**RAG Pipeline (fully functional — verified working Feb 10, 2026):**
+1. User asks question in AskFlowState panel (supports voice input via Web Speech API)
+2. `ask-flowstate` v17 embeds question via Gemini gemini-embedding-001 (768d)
+3. pgvector `search_embeddings` RPC finds relevant ideas/projects/tasks (filters by user_id)
 4. Context enriched with full entity details from source tables
-5. Gemini 1.5 Flash generates answer with system prompt + conversation history
-6. Response displayed with source citations
+5. **Gemini 2.5 Flash** generates answer with system prompt + conversation history (up to 6 turns)
+6. Response displayed with source citations (entity type, title, excerpt, similarity %)
 
-**Bug Fixed:** ~~`embeddings` table was missing `user_id` column~~ — Added `user_id uuid` column via migration, backfilled 6 rows from entity owners, deleted 1 orphan. `search_embeddings` RPC optimized to filter on `embeddings.user_id` directly. `generate-embedding` edge function (v3) now resolves and stores `user_id`. `ask-flowstate` edge function (v13) now uses **real Gemini 1.5 Flash** for answer generation (was previously rule-based pattern matching).
+**Bugs Fixed:**
+- ~~Missing `user_id` column~~ — Migration applied, backfilled, index created
+- ~~Rule-based answers~~ — Replaced with real Gemini 2.5 Flash LLM
+- ~~Retired Gemini models~~ — Upgraded from text-embedding-004/gemini-1.5-flash to gemini-embedding-001/gemini-2.5-flash
+- ~~Old embeddings incompatible~~ — All entities re-embedded with new model via `regenerate-embeddings`
 
 **Score estimate:** 18/20 (optionally persist chat history for full marks)
 
@@ -212,11 +217,12 @@
 - ☑ User roles + admin UI
 - ☑ Editable profile (name, bio, avatar, timezone, role)
 - ☑ 7 ReactBits components integrated
-- ☑ 4 Edge Functions deployed (generate-embedding v3, semantic-search, ask-flowstate v13, parse-task-nl)
+- ☑ 5 Edge Functions deployed (generate-embedding v4, semantic-search v3, ask-flowstate v17, parse-task-nl v3, regenerate-embeddings v1)
 - ☑ RAG chatbot UI with voice I/O
-- ☑ LLM integration — Gemini 1.5 Flash for answer generation (v13)
-- ☑ Embedding pipeline hooked into entity CRUD
-- ☑ Semantic search verified end-to-end (user_id filtering works)
+- ☑ LLM integration — Gemini 2.5 Flash for answer generation (v17)
+- ☑ Embedding pipeline hooked into entity CRUD (gemini-embedding-001)
+- ☑ Semantic search verified end-to-end (user_id filtering, 11 embeddings)
+- ☑ Session refresh bug fixed (getSession() + onAuthStateChange)
 - ☑ Deployed to Netlify
 
 ---
@@ -229,13 +235,13 @@
 | 2. Profile | 10 | 10 | Complete |
 | 3. Database | 10 | 9 | Need schema diagram |
 | 4. UI Components | 15 | 14 | Need to list in write-up |
-| 5. Edge Functions | 10 | 9 | Need to document |
+| 5. Edge Functions | 10 | 10 | 5 deployed, exceeds requirement |
 | 6. MCP Integration | 10 | 9 | Need to document |
 | 7. RAG Chatbot | 20 | 18 | user_id fixed, LLM integrated, optionally persist chat |
 | 8. Write-Up | 10 | 0 | Not started |
-| **Total** | **100** | **83–87** | |
+| **Total** | **100** | **84–88** | |
 
-**After writing PDF: ~93–97/100**
+**After writing PDF: ~94–98/100**
 
 ---
 

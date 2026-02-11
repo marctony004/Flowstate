@@ -7,6 +7,7 @@
  * - Respond with voice output (text-to-speech)
  * - Show citations from your data
  * - Collapse to minimize while keeping context
+ * - Persist chat history to Supabase
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";
@@ -26,6 +27,7 @@ import {
   X,
   PanelRightClose,
   PanelRightOpen,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +36,7 @@ import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useSpeechSynthesis } from "@/hooks/useSpeechSynthesis";
 import supabase from "@/supabase";
 import { cn } from "@/lib/utils";
+import type { Json } from "@/types/database";
 
 interface Citation {
   entityType: string;
@@ -67,6 +70,7 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [voiceOutputEnabled, setVoiceOutputEnabled] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -97,6 +101,34 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
     pitch: 1.0,
   });
 
+  // Load chat history from database on first open
+  useEffect(() => {
+    if (!open || historyLoaded || !session?.user.id) return;
+
+    async function loadHistory() {
+      const { data } = await supabase
+        .from("chat_messages")
+        .select("*")
+        .eq("user_id", session!.user.id)
+        .order("created_at", { ascending: true })
+        .limit(50);
+
+      if (data && data.length > 0) {
+        const restored: Message[] = data.map((row) => ({
+          id: row.id,
+          role: row.role as "user" | "assistant",
+          content: row.content,
+          citations: row.citations ? (row.citations as unknown as Citation[]) : undefined,
+          timestamp: new Date(row.created_at),
+        }));
+        setMessages(restored);
+      }
+      setHistoryLoaded(true);
+    }
+
+    loadHistory();
+  }, [open, historyLoaded, session?.user.id]);
+
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -119,6 +151,25 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
     }
   }, [open, isCollapsed, cancelSpeech]);
 
+  // Save a message to the database (fire-and-forget)
+  const persistMessage = useCallback(
+    async (msg: Message) => {
+      if (!session?.user.id) return;
+      try {
+        await supabase.from("chat_messages").insert({
+          id: msg.id,
+          user_id: session.user.id,
+          role: msg.role,
+          content: msg.content,
+          citations: msg.citations ? (msg.citations as unknown as Json) : null,
+        });
+      } catch {
+        // Silent fail — don't block chat
+      }
+    },
+    [session?.user.id]
+  );
+
   // Handle sending a message
   const sendMessage = useCallback(async () => {
     if (!inputValue.trim() || !session?.user.id || isLoading) return;
@@ -134,6 +185,9 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
     setInputValue("");
     resetTranscript();
     setIsLoading(true);
+
+    // Persist user message
+    persistMessage(userMessage);
 
     try {
       // Build conversation history for context
@@ -162,6 +216,9 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
 
       setMessages((prev) => [...prev, assistantMessage]);
 
+      // Persist assistant message
+      persistMessage(assistantMessage);
+
       // Speak the response if voice output is enabled
       if (voiceOutputEnabled && speechSynthesisSupported) {
         speak(data.answer);
@@ -187,6 +244,7 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
     voiceOutputEnabled,
     speechSynthesisSupported,
     speak,
+    persistMessage,
   ]);
 
   // Handle key press
@@ -207,9 +265,19 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
     }
   };
 
+  // Clear chat history
+  const clearHistory = async () => {
+    if (!session?.user.id) return;
+    setMessages([]);
+    try {
+      await supabase.from("chat_messages").delete().eq("user_id", session.user.id);
+    } catch {
+      // Silent fail
+    }
+  };
+
   // Close panel
   const handleClose = () => {
-    setMessages([]);
     setInputValue("");
     resetTranscript();
     setIsCollapsed(false);
@@ -273,6 +341,17 @@ export default function AskFlowState({ open, onOpenChange }: AskFlowStateProps) 
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {messages.length > 0 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={clearHistory}
+                className="h-8 w-8 text-muted-foreground hover:text-red-500"
+                title="Clear chat history"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
             {speechSynthesisSupported && (
               <Button
                 variant="ghost"

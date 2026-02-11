@@ -288,6 +288,33 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          id: string
+          user_id: string
+          role: string
+          content: string
+          citations: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          role: string
+          content: string
+          citations?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          role?: string
+          content?: string
+          citations?: Json | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assignee_id: string | null
@@ -372,3 +399,4 @@ export type Milestone = Tables<"milestones">
 export type Task = Tables<"tasks">
 export type CollaboratorNote = Tables<"collaborator_notes">
 export type ActivityLog = Tables<"activity_log">
+export type ChatMessage = Tables<"chat_messages">

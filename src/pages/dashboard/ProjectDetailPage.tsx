@@ -11,14 +11,22 @@ import {
   Plus,
   Pencil,
   Trash2,
+  Users,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import supabase from "@/supabase";
-import type { Project, Task, Idea, Milestone } from "@/types/database";
+import type { Project, Task, Idea, Milestone, ProjectMember, Profile } from "@/types/database";
 import ProjectDialog from "@/components/dashboard/ProjectDialog";
 import TaskDialog from "@/components/dashboard/TaskDialog";
+import MilestoneDialog from "@/components/dashboard/MilestoneDialog";
+import InviteMemberDialog from "@/components/dashboard/InviteMemberDialog";
 import DeleteDialog from "@/components/dashboard/DeleteDialog";
 import { toast } from "sonner";
+
+interface MemberWithProfile extends ProjectMember {
+  profile?: Pick<Profile, "display_name" | "avatar_url" | "role"> | null;
+}
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +35,7 @@ export default function ProjectDetailPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [members, setMembers] = useState<MemberWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [editProjectOpen, setEditProjectOpen] = useState(false);
@@ -39,30 +48,65 @@ export default function ProjectDetailPage() {
   const [deleteTaskTarget, setDeleteTaskTarget] = useState<Task | null>(null);
   const [deletingTask, setDeletingTask] = useState(false);
 
+  const [milestoneDialogOpen, setMilestoneDialogOpen] = useState(false);
+  const [editMilestone, setEditMilestone] = useState<Milestone | null>(null);
+  const [deleteMilestoneOpen, setDeleteMilestoneOpen] = useState(false);
+  const [deleteMilestoneTarget, setDeleteMilestoneTarget] = useState<Milestone | null>(null);
+  const [deletingMilestone, setDeletingMilestone] = useState(false);
+
+  const [inviteMemberOpen, setInviteMemberOpen] = useState(false);
+
   const fetchData = useCallback(async () => {
     if (!id) return;
-    const [projectRes, tasksRes, ideasRes, milestonesRes] = await Promise.all([
-      supabase.from("projects").select("*").eq("id", id).single(),
-      supabase
-        .from("tasks")
-        .select("*")
-        .eq("project_id", id)
-        .order("position", { ascending: true }),
-      supabase
-        .from("ideas")
-        .select("*")
-        .eq("project_id", id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("milestones")
-        .select("*")
-        .eq("project_id", id)
-        .order("position", { ascending: true }),
-    ]);
+    const [projectRes, tasksRes, ideasRes, milestonesRes, membersRes] =
+      await Promise.all([
+        supabase.from("projects").select("*").eq("id", id).single(),
+        supabase
+          .from("tasks")
+          .select("*")
+          .eq("project_id", id)
+          .order("position", { ascending: true }),
+        supabase
+          .from("ideas")
+          .select("*")
+          .eq("project_id", id)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("milestones")
+          .select("*")
+          .eq("project_id", id)
+          .order("position", { ascending: true }),
+        supabase
+          .from("project_members")
+          .select("*")
+          .eq("project_id", id)
+          .order("invited_at", { ascending: true }),
+      ]);
     setProject(projectRes.data);
     setTasks(tasksRes.data ?? []);
     setIdeas(ideasRes.data ?? []);
     setMilestones(milestonesRes.data ?? []);
+
+    // Enrich members with profile data
+    const rawMembers = membersRes.data ?? [];
+    if (rawMembers.length > 0) {
+      const userIds = rawMembers.map((m) => m.user_id);
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name, avatar_url, role")
+        .in("id", userIds);
+
+      const profileMap = new Map(profiles?.map((p) => [p.id, p]));
+      setMembers(
+        rawMembers.map((m) => ({
+          ...m,
+          profile: profileMap.get(m.user_id) ?? null,
+        }))
+      );
+    } else {
+      setMembers([]);
+    }
+
     setLoading(false);
   }, [id]);
 
@@ -73,9 +117,15 @@ export default function ProjectDetailPage() {
   async function handleDeleteProject() {
     if (!project) return;
     setDeletingProject(true);
-    const { error } = await supabase.from("projects").delete().eq("id", project.id);
+    const { error } = await supabase
+      .from("projects")
+      .delete()
+      .eq("id", project.id);
     setDeletingProject(false);
-    if (error) { toast.error("Failed to delete project"); return; }
+    if (error) {
+      toast.error("Failed to delete project");
+      return;
+    }
     toast.success("Project deleted");
     navigate("/dashboard/projects");
   }
@@ -83,12 +133,46 @@ export default function ProjectDetailPage() {
   async function handleDeleteTask() {
     if (!deleteTaskTarget) return;
     setDeletingTask(true);
-    const { error } = await supabase.from("tasks").delete().eq("id", deleteTaskTarget.id);
+    const { error } = await supabase
+      .from("tasks")
+      .delete()
+      .eq("id", deleteTaskTarget.id);
     setDeletingTask(false);
     setDeleteTaskOpen(false);
     setDeleteTaskTarget(null);
-    if (error) { toast.error("Failed to delete task"); return; }
+    if (error) {
+      toast.error("Failed to delete task");
+      return;
+    }
     toast.success("Task deleted");
+    fetchData();
+  }
+
+  async function handleDeleteMilestone() {
+    if (!deleteMilestoneTarget) return;
+    setDeletingMilestone(true);
+    const { error } = await supabase
+      .from("milestones")
+      .delete()
+      .eq("id", deleteMilestoneTarget.id);
+    setDeletingMilestone(false);
+    setDeleteMilestoneOpen(false);
+    setDeleteMilestoneTarget(null);
+    if (error) {
+      toast.error("Failed to delete milestone");
+      return;
+    }
+    toast.success("Milestone deleted");
+    fetchData();
+  }
+
+  async function toggleMilestoneComplete(m: Milestone) {
+    await supabase
+      .from("milestones")
+      .update({
+        completed_at: m.completed_at ? null : new Date().toISOString(),
+      })
+      .eq("id", m.id);
     fetchData();
   }
 
@@ -100,6 +184,19 @@ export default function ProjectDetailPage() {
         status: task.completed_at ? "todo" : "done",
       })
       .eq("id", task.id);
+    fetchData();
+  }
+
+  async function removeMember(memberId: string) {
+    const { error } = await supabase
+      .from("project_members")
+      .delete()
+      .eq("id", memberId);
+    if (error) {
+      toast.error("Failed to remove member");
+      return;
+    }
+    toast.success("Member removed");
     fetchData();
   }
 
@@ -305,12 +402,25 @@ export default function ProjectDetailPage() {
           )}
         </div>
 
-        {/* Sidebar: Milestones + Ideas */}
+        {/* Sidebar: Milestones + Team + Ideas */}
         <div className="space-y-6">
+          {/* Milestones */}
           <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-foreground">
-              <Flag className="h-5 w-5" /> Milestones
-            </h2>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                <Flag className="h-5 w-5" /> Milestones
+              </h2>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setEditMilestone(null);
+                  setMilestoneDialogOpen(true);
+                }}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
             {milestones.length === 0 ? (
               <p className="py-4 text-center text-sm text-muted-foreground">
                 No milestones
@@ -318,13 +428,16 @@ export default function ProjectDetailPage() {
             ) : (
               <div className="space-y-3">
                 {milestones.map((m) => (
-                  <div key={m.id} className="flex items-start gap-2">
-                    <div
-                      className={`mt-1 h-3 w-3 rounded-full ${
-                        m.completed_at ? "bg-[var(--success)]" : "bg-border"
+                  <div key={m.id} className="group flex items-start gap-2">
+                    <button
+                      onClick={() => toggleMilestoneComplete(m)}
+                      className={`mt-1 h-3 w-3 shrink-0 rounded-full transition-colors ${
+                        m.completed_at
+                          ? "bg-[var(--success)]"
+                          : "bg-border hover:bg-primary"
                       }`}
                     />
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <p
                         className={`text-sm font-medium ${
                           m.completed_at
@@ -340,12 +453,81 @@ export default function ProjectDetailPage() {
                         </p>
                       )}
                     </div>
+                    <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                      <button
+                        onClick={() => {
+                          setEditMilestone(m);
+                          setMilestoneDialogOpen(true);
+                        }}
+                        className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setDeleteMilestoneTarget(m);
+                          setDeleteMilestoneOpen(true);
+                        }}
+                        className="rounded-md p-1 text-muted-foreground hover:bg-red-500/10 hover:text-red-500"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
+          {/* Team Members */}
+          <div className="rounded-xl border border-border bg-card p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                <Users className="h-5 w-5" /> Team
+              </h2>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setInviteMemberOpen(true)}
+              >
+                <UserPlus className="h-4 w-4" />
+              </Button>
+            </div>
+            {members.length === 0 ? (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                No team members
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {members.map((m) => (
+                  <div
+                    key={m.id}
+                    className="group flex items-center gap-2 rounded-lg p-2 hover:bg-accent/50"
+                  >
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
+                      {m.profile?.display_name?.charAt(0).toUpperCase() || "?"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {m.profile?.display_name || "Unknown"}
+                      </p>
+                      <p className="text-xs text-muted-foreground capitalize">
+                        {m.role}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => removeMember(m.id)}
+                      className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-500"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Ideas */}
           <div className="rounded-xl border border-border bg-card p-5">
             <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-foreground">
               <Lightbulb className="h-5 w-5" /> Ideas
@@ -370,6 +552,7 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
+      {/* Dialogs */}
       <ProjectDialog
         open={editProjectOpen}
         onOpenChange={setEditProjectOpen}
@@ -399,6 +582,29 @@ export default function ProjectDetailPage() {
         onConfirm={handleDeleteTask}
         entityName="Task"
         loading={deletingTask}
+      />
+
+      <MilestoneDialog
+        open={milestoneDialogOpen}
+        onOpenChange={setMilestoneDialogOpen}
+        milestone={editMilestone}
+        projectId={id!}
+        onSuccess={fetchData}
+      />
+
+      <DeleteDialog
+        open={deleteMilestoneOpen}
+        onOpenChange={setDeleteMilestoneOpen}
+        onConfirm={handleDeleteMilestone}
+        entityName="Milestone"
+        loading={deletingMilestone}
+      />
+
+      <InviteMemberDialog
+        open={inviteMemberOpen}
+        onOpenChange={setInviteMemberOpen}
+        projectId={id!}
+        onSuccess={fetchData}
       />
     </div>
   );

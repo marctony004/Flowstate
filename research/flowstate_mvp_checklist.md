@@ -366,12 +366,12 @@ This checklist details all items required to stand up the **Minimum Viable Produ
 
 | Item | Status | Owner | Notes |
 |------|--------|-------|-------|
-| Create SearchDialog component (Cmd+K / Ctrl+K) | ☐ | Dev | Modal with search input, keyboard shortcut |
-| Implement cross-resource search (projects, ideas, tasks, collaborators) | ☐ | Dev | Query all tables, combine results |
-| Display categorized search results | ☐ | Dev | Group by type with icons |
-| Navigate to entity on result click | ☐ | Dev | Route to project detail, idea, task, etc. |
-| Add search trigger button to dashboard sidebar/header | ☐ | Dev | Search icon with keyboard shortcut hint |
-| Implement search debouncing and loading state | ☐ | Dev | 300ms debounce, spinner on search |
+| Create SearchDialog component (Cmd+K / Ctrl+K) | ☑ | Dev | `SearchDialog.tsx` with `useSearchShortcut` hook |
+| Implement cross-resource search (projects, ideas, tasks, collaborators) | ☑ | Dev | Semantic search across ideas, tasks, projects via pgvector |
+| Display categorized search results | ☑ | Dev | Entity type badges with color coding, similarity % |
+| Navigate to entity on result click | ☑ | Dev | Routes to project detail, idea, task pages |
+| Add search trigger button to dashboard sidebar/header | ☑ | Dev | Search button in header with ⌘K hint |
+| Implement search debouncing and loading state | ☑ | Dev | 400ms debounce, loading spinner |
 | Test search across all entity types | ☐ | QA | Edge cases, empty results, special characters |
 
 ### 7B.5 Analytics & Stats Page
@@ -422,8 +422,8 @@ This phase implements the core AI/NLP features that differentiate FlowState as a
 
 | Item | Status | Owner | Notes |
 |------|--------|-------|-------|
-| Set up vector embedding infrastructure | ☑ | Dev | Gemini text-embedding-004 API via Edge Function |
-| Create `embeddings` table in Supabase | ☑ | Dev | entity_type, entity_id, embedding vector(768), content_hash |
+| Set up vector embedding infrastructure | ☑ | Dev | Gemini gemini-embedding-001 API via Edge Function v4 (768d) |
+| Create `embeddings` table in Supabase | ☑ | Dev | entity_type, entity_id, user_id, embedding vector(768), content_hash — 11 rows |
 | Enable pgvector extension in Supabase | ☑ | Dev | pgvector enabled with ivfflat index |
 | Generate embeddings on idea/note/task create/update | ☑ | Dev | `useEmbedding` hook + `generate-embedding` Edge Function |
 | Implement semantic search Edge Function | ☑ | Dev | `semantic-search` Edge Function with `search_embeddings` SQL function |
@@ -439,7 +439,7 @@ This phase implements the core AI/NLP features that differentiate FlowState as a
 |------|--------|-------|-------|
 | Create `session_logs` table | ☐ | Dev | project_id, user_id, content, timestamp, embedding |
 | Create AskFlowState component | ☑ | Dev | Full voice assistant with chat UI, voice input/output |
-| Implement retrieval-augmented generation (RAG) | ☑ | Dev | `ask-flowstate` Edge Function retrieves context, generates answer |
+| Implement retrieval-augmented generation (RAG) | ☑ | Dev | `ask-flowstate` v17 — embeds question, pgvector search, Gemini 2.5 Flash answer |
 | Display answers with evidence | ☑ | Dev | Citations with entity type badges, links to sources |
 | Add session log capture on key events | ☐ | Dev | Note creation, task completion, collaborator feedback |
 | Implement conversation history in AskFlowState | ☑ | Dev | Multi-turn Q&A with conversation context |
@@ -502,8 +502,8 @@ This phase implements the core AI/NLP features that differentiate FlowState as a
 
 | Item | Status | Owner | Notes |
 |------|--------|-------|-------|
-| Set up OpenAI API integration | ☐ | Dev | For embeddings and chat completions |
-| Create secure API key management | ☐ | Dev | Store in Supabase secrets, not client-side |
+| Set up OpenAI API integration | ☑ | Dev | Using Gemini API (gemini-embedding-001 + gemini-2.5-flash) instead of OpenAI |
+| Create secure API key management | ☑ | Dev | GEMINI_API_KEY stored in Supabase secrets, not client-side |
 | Implement rate limiting and cost controls | ☐ | Dev | Daily/monthly caps, usage monitoring |
 | Create NLP Edge Function base template | ☐ | Dev | Reusable structure for all NLP functions |
 | Add error handling and fallbacks | ☐ | Dev | Graceful degradation when API unavailable |

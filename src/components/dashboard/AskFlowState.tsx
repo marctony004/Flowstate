@@ -33,6 +33,7 @@ import { useSession } from "@/context/SessionContext";
 import { useVapiAssistant, VapiStatus } from "@/hooks/useVapiAssistant";
 import supabase from "@/supabase";
 import { cn } from "@/lib/utils";
+import { sendNotification } from "@/lib/notifications";
 import type { Json } from "@/types/database";
 
 interface Citation {
@@ -186,11 +187,6 @@ export default function AskFlowState({ open, onOpenChange, onAction }: AskFlowSt
 
       if (error) throw error;
 
-      // Debug: log actions from edge function
-      if (data.actions?.length) {
-        console.log("[AskFlowState] Actions received:", data.actions);
-      }
-
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
@@ -206,9 +202,17 @@ export default function AskFlowState({ open, onOpenChange, onAction }: AskFlowSt
       persistMessage(assistantMessage);
 
       // Notify parent about performed actions (triggers brain map node ping)
-      if (data.actions && data.actions.length > 0 && onAction) {
+      if (data.actions && data.actions.length > 0) {
         for (const action of data.actions) {
-          onAction(action.type || action.entityType);
+          if (onAction) onAction(action.type || action.entityType);
+          sendNotification({
+            userId: session.user.id,
+            type: "ai_action",
+            title: `AI created ${action.type || action.entityType}: ${action.title}`,
+            message: `FlowState assistant created a new ${action.type || action.entityType} for you.`,
+            entityType: action.type || action.entityType,
+            entityId: action.id,
+          });
         }
       }
 

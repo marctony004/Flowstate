@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Save, User, Camera } from "lucide-react";
+import { Save, User, Camera, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,6 +22,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import { toast } from "sonner";
@@ -76,6 +77,12 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [notifPrefs, setNotifPrefs] = useState({
+    task_assigned: true,
+    member_invited: true,
+    collaborator_added: true,
+    ai_action: true,
+  });
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -99,6 +106,10 @@ export default function SettingsPage() {
         role: (profile.role as ProfileFormValues["role"]) || "creator",
       });
       setAvatarPreview(profile.avatar_url);
+      if (profile.notification_preferences && typeof profile.notification_preferences === "object") {
+        const prefs = profile.notification_preferences as Record<string, boolean>;
+        setNotifPrefs((prev) => ({ ...prev, ...prefs }));
+      }
       setLoading(false);
     }
   }, [profile, form]);
@@ -343,6 +354,49 @@ export default function SettingsPage() {
                 : "—"}
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* Notification Preferences */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <Bell className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-lg font-semibold text-foreground">Notifications</h2>
+        </div>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Choose which notifications you'd like to receive.
+        </p>
+        <div className="space-y-4">
+          {([
+            { key: "task_assigned" as const, label: "Task assigned to you", description: "When someone assigns a task to you" },
+            { key: "member_invited" as const, label: "Invited to a project", description: "When you're added as a project member" },
+            { key: "collaborator_added" as const, label: "Collaborator added", description: "When a new collaborator is added" },
+            { key: "ai_action" as const, label: "AI assistant actions", description: "When FlowState AI creates items for you" },
+          ]).map((item) => (
+            <div key={item.key} className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground">{item.label}</p>
+                <p className="text-xs text-muted-foreground">{item.description}</p>
+              </div>
+              <Switch
+                checked={notifPrefs[item.key]}
+                onCheckedChange={async (checked) => {
+                  const updated = { ...notifPrefs, [item.key]: checked };
+                  setNotifPrefs(updated);
+                  if (session?.user.id) {
+                    const { error } = await supabase
+                      .from("profiles")
+                      .update({ notification_preferences: updated })
+                      .eq("id", session.user.id);
+                    if (error) {
+                      toast.error("Failed to update notification preferences");
+                      setNotifPrefs(notifPrefs);
+                    }
+                  }
+                }}
+              />
+            </div>
+          ))}
         </div>
       </div>
 

@@ -26,6 +26,7 @@ import supabase from "@/supabase";
 import { cn } from "@/lib/utils";
 import SearchDialog, { useSearchShortcut } from "./SearchDialog";
 import AskFlowState from "./AskFlowState";
+import NotificationBell from "./NotificationBell";
 
 const navItems = [
   { label: "Session Hub", href: "/dashboard", icon: Disc3 },
@@ -352,6 +353,7 @@ export default function DashboardLayout() {
             >
               <Search className="h-5 w-5" />
             </Button>
+            <NotificationBell />
             <Button
               variant="ghost"
               size="icon"

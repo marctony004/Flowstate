@@ -18,6 +18,7 @@ import supabase from "@/supabase";
 import type { Task } from "@/types/database";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
+import { sendNotification } from "@/lib/notifications";
 import { useEmbedding } from "@/hooks/useEmbedding";
 import NLTaskInput from "./NLTaskInput";
 import type { ParsedTask } from "@/lib/nlpTaskParser";
@@ -165,6 +166,18 @@ export default function TaskDialog({
       metadata: { title: parsed.title, nlParsed: true },
     });
 
+    if (newTask?.id) {
+      sendNotification({
+        userId: session.user.id,
+        type: "task_assigned",
+        title: `New task: ${parsed.title}`,
+        message: "Task created via natural language.",
+        entityType: "task",
+        entityId: newTask.id,
+        actorId: session.user.id,
+      });
+    }
+
     // Generate embedding in background
     if (newTask?.id) {
       embedTask(newTask.id, {
@@ -226,6 +239,19 @@ export default function TaskDialog({
         projectId: projectIdToUse,
         metadata: { title: data.title },
       });
+
+      // Notify the current user about the new task
+      if (newTask?.id) {
+        sendNotification({
+          userId: session.user.id,
+          type: "task_assigned",
+          title: `New task: ${data.title}`,
+          message: "A new task was created.",
+          entityType: "task",
+          entityId: newTask.id,
+          actorId: session.user.id,
+        });
+      }
 
       // Generate embedding in background
       if (newTask?.id) {

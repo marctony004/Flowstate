@@ -179,6 +179,7 @@ export type Database = {
           display_name: string
           id: string
           is_admin: boolean
+          notification_preferences: Json | null
           onboarded_at: string | null
           plan: string
           role: string
@@ -192,6 +193,7 @@ export type Database = {
           display_name?: string
           id: string
           is_admin?: boolean
+          notification_preferences?: Json | null
           onboarded_at?: string | null
           plan?: string
           role?: string
@@ -205,6 +207,7 @@ export type Database = {
           display_name?: string
           id?: string
           is_admin?: boolean
+          notification_preferences?: Json | null
           onboarded_at?: string | null
           plan?: string
           role?: string
@@ -315,6 +318,48 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          id: string
+          user_id: string
+          type: string
+          title: string
+          message: string | null
+          read: boolean
+          entity_type: string | null
+          entity_id: string | null
+          actor_id: string | null
+          metadata: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          type: string
+          title: string
+          message?: string | null
+          read?: boolean
+          entity_type?: string | null
+          entity_id?: string | null
+          actor_id?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: string
+          title?: string
+          message?: string | null
+          read?: boolean
+          entity_type?: string | null
+          entity_id?: string | null
+          actor_id?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           assignee_id: string | null
@@ -400,3 +445,4 @@ export type Task = Tables<"tasks">
 export type CollaboratorNote = Tables<"collaborator_notes">
 export type ActivityLog = Tables<"activity_log">
 export type ChatMessage = Tables<"chat_messages">
+export type Notification = Tables<"notifications">

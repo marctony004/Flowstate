@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Outlet, Navigate, useLocation } from "react-router-dom";
-import NotFoundPage from "../pages/404Page";
 import { useSession } from "../context/SessionContext";
 import supabase from "../supabase";
 
@@ -38,7 +37,7 @@ const AuthProtectedRoute = () => {
   }, [session?.user.id]);
 
   if (!session) {
-    return <NotFoundPage />;
+    return <Navigate to="/" replace />;
   }
 
   // Still checking onboarding status

@@ -17,6 +17,7 @@ import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
+import { sendNotification } from "@/lib/notifications";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -104,6 +105,17 @@ export default function InviteMemberDialog({
       entityType: "collaborator",
       projectId,
       metadata: { email: data.email, role: data.role },
+    });
+
+    // Notify the invited user
+    sendNotification({
+      userId: uid as string,
+      type: "member_invited",
+      title: "You've been invited to a project",
+      message: `You were added as ${data.role} to a project.`,
+      entityType: "project",
+      entityId: projectId,
+      actorId: session.user.id,
     });
 
     onOpenChange(false);

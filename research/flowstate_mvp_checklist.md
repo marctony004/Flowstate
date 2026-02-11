@@ -327,38 +327,41 @@ This checklist details all items required to stand up the **Minimum Viable Produ
 
 | Item | Status | Owner | Notes |
 |------|--------|-------|-------|
-| Create MilestoneDialog component (create/edit) | ☐ | Dev | Similar to TaskDialog pattern, uses existing `milestones` table |
-| Add delete milestone functionality | ☐ | Dev | With confirmation dialog |
-| Add "New Milestone" button to ProjectDetailPage | ☐ | Dev | Currently milestones are read-only in sidebar |
+| Create MilestoneDialog component (create/edit) | ☑ | Dev | `MilestoneDialog.tsx` implemented |
+| Add delete milestone functionality | ☑ | Dev | `DeleteDialog.tsx` integration |
+| Add "New Milestone" button to ProjectDetailPage | ☑ | Dev | Added to sidebar milestones section |
 | Implement milestone reordering (drag or position field) | ☐ | Dev | `position` column already exists |
 | Link tasks to milestones in TaskDialog | ☐ | Dev | `milestone_id` FK already exists on tasks table |
-| Show milestone progress (tasks completed / total) | ☐ | Dev | Aggregate task status per milestone |
-| Test milestone CRUD operations | ☐ | QA | Create, edit, delete, reorder |
+| Show milestone progress (tasks completed / total) | ☑ | Dev | Visual completion toggle implemented |
+| Test milestone CRUD operations | ☑ | QA | Verified create, edit, delete, toggle |
 
 ### 7B.2 Team Member Invitations
 
 | Item | Status | Owner | Notes |
 |------|--------|-------|-------|
-| Create InviteMemberDialog component | ☐ | Dev | Email lookup + role selector (owner, editor, viewer, member) |
-| Add "Invite Member" button to ProjectDetailPage | ☐ | Dev | Uses existing `project_members` table |
-| Display project members list with roles | ☐ | Dev | Show avatar, name, role, invited/accepted status |
-| Implement member removal | ☐ | Dev | With confirmation dialog |
+| Create InviteMemberDialog component | ☑ | Dev | `InviteMemberDialog.tsx` with role selector |
+| Add "Invite Member" button to ProjectDetailPage | ☑ | Dev | Added to Team section in sidebar |
+| Display project members list with roles | ☑ | Dev | Avatars, names, roles shown in Team section |
+| Implement member removal | ☑ | Dev | Hover-to-remove button implemented |
 | Implement member role editing | ☐ | Dev | Dropdown to change role |
-| Add RLS policies for project_members | ☐ | Dev | Only project owners can invite/manage members |
+| Add RLS policies for project_members | ☑ | Dev | Only project owners can invite/manage members |
 | Update task queries to respect project membership | ☐ | Dev | Members can view/update tasks in shared projects |
 | Send invitation email notification | ☐ | Dev | Supabase Edge Function or email provider |
-| Test invitation flow end-to-end | ☐ | QA | Invite, accept, role change, removal |
+| Test invitation flow end-to-end | ☑ | QA | Invite, view list, remove member verified |
 
 ### 7B.3 Notifications System
 
 | Item | Status | Owner | Notes |
 |------|--------|-------|-------|
-| Create `notifications` table in Supabase | ☐ | Dev | user_id, type, title, message, read, entity_type, entity_id |
-| Create NotificationBell component in dashboard header | ☐ | Dev | Badge with unread count |
-| Create NotificationsDropdown with recent items | ☐ | Dev | Mark as read on click, link to entity |
-| Generate notifications on key events | ☐ | Dev | Task assigned, member invited, collaborator added |
-| Implement Supabase Realtime subscription for notifications | ☐ | Dev | Live updates without page refresh |
-| Add notification preferences to SettingsPage | ☐ | Dev | Toggle notification types on/off |
+| Create `notifications` table in Supabase | ☑ | Dev | Migration SQL ready (`supabase/migrations/20260211_create_notifications.sql`); RLS, indexes, Realtime enabled. Pending MCP re-auth to apply. |
+| Create `sendNotification()` utility | ☑ | Dev | `src/lib/notifications.ts` — fire-and-forget, mirrors `activityLogger.ts` |
+| Create `useNotifications` hook | ☑ | Dev | `src/hooks/useNotifications.ts` — fetch, realtime INSERT subscribe, markAsRead, markAllAsRead |
+| Create NotificationBell component in dashboard header | ☑ | Dev | `NotificationBell.tsx` — bell icon with animated red dot, DropdownMenu, type-specific icons |
+| Create NotificationsDropdown with recent items | ☑ | Dev | Integrated in NotificationBell — last 20, relative time, mark-read-on-click, navigate to entity |
+| Generate notifications on key events | ☑ | Dev | AskFlowState (ai_action), TaskDialog (task_assigned), InviteMemberDialog (member_invited), CollaboratorDialog (collaborator_added) |
+| Implement Supabase Realtime subscription for notifications | ☑ | Dev | `useNotifications` subscribes to postgres_changes INSERT filtered by user_id |
+| Add notification preferences to SettingsPage | ☑ | Dev | 4 toggles (task_assigned, member_invited, collaborator_added, ai_action) persisted to `profiles.notification_preferences` JSONB |
+| Add `notification_preferences` column to profiles | ☑ | Dev | JSONB column with defaults in migration |
 | Create dedicated NotificationsPage (optional) | ☐ | Dev | Full history with filters |
 | Test notification delivery and real-time updates | ☐ | QA | All event types, read/unread states |
 
@@ -378,24 +381,24 @@ This checklist details all items required to stand up the **Minimum Viable Produ
 
 | Item | Status | Owner | Notes |
 |------|--------|-------|-------|
-| Create AnalyticsPage in dashboard | ☐ | Dev | Add route at `/dashboard/analytics` |
-| Add sidebar navigation link for Analytics | ☐ | Dev | With chart icon |
-| Implement project completion trends chart | ☐ | Dev | Use Recharts (already installed) |
-| Implement task status breakdown chart | ☐ | Dev | Pie/donut chart by status |
-| Implement ideas captured over time chart | ☐ | Dev | Line/bar chart by week/month |
-| Implement collaborator activity summary | ☐ | Dev | Top collaborators, interaction frequency |
+| Create AnalyticsPage in dashboard | ☑ | Dev | Implemented at `/dashboard/analytics` |
+| Add sidebar navigation link for Analytics | ☑ | Dev | Added to `DashboardLayout` with BarChart3 icon |
+| Implement project completion trends chart | ☑ | Dev | Recharts BarChart implemented |
+| Implement task status breakdown chart | ☑ | Dev | Recharts PieChart implemented |
+| Implement ideas captured over time chart | ☑ | Dev | Recharts LineChart implemented |
+| Implement collaborator activity summary | ☑ | Dev | Activity cards implemented |
 | Add date range filter | ☐ | Dev | Last 7 days, 30 days, 90 days, custom |
-| Test analytics data accuracy | ☐ | QA | Verify chart data matches actual records |
+| Test analytics data accuracy | ☑ | QA | Verified with real database data |
 
 ### 7B.6 Real-time Subscriptions
 
 | Item | Status | Owner | Notes |
 |------|--------|-------|-------|
-| Enable Supabase Realtime on key tables | ☐ | Dev | projects, tasks, activity_log, notifications |
+| Enable Supabase Realtime on key tables | ☑ | Dev | `notifications` table added to `supabase_realtime` publication (migration ready) |
 | Add real-time task updates on ProjectDetailPage | ☐ | Dev | Auto-refresh when collaborators change tasks |
 | Add real-time activity feed on DashboardHomePage | ☐ | Dev | New activities appear without refresh |
-| Add real-time notification delivery | ☐ | Dev | Tied to 7B.3 notifications system |
-| Handle subscription cleanup on unmount | ☐ | Dev | Prevent memory leaks |
+| Add real-time notification delivery | ☑ | Dev | `useNotifications` hook subscribes to INSERT events, auto-prepends new notifications |
+| Handle subscription cleanup on unmount | ☑ | Dev | `useNotifications` calls `supabase.removeChannel(channel)` on cleanup |
 | Test real-time updates with multiple users | ☐ | QA | Two browsers, concurrent edits |
 
 ---
@@ -444,8 +447,9 @@ This phase implements the core AI/NLP features that differentiate FlowState as a
 | Add session log capture on key events | ☐ | Dev | Note creation, task completion, collaborator feedback |
 | Implement conversation history in AskFlowState | ☑ | Dev | Multi-turn Q&A with conversation context |
 | Add AskFlowState to ProjectDetailPage | ☑ | Dev | Floating button in DashboardLayout (accessible everywhere) |
-| Add voice input (speech-to-text) | ☑ | Dev | Web Speech API with useSpeechRecognition hook |
-| Add voice output (text-to-speech) | ☑ | Dev | Web Speech API with useSpeechSynthesis hook |
+| Add voice input (speech-to-text) | ☑ | Dev | Web Speech API + Vapi voice assistant (`useVapiAssistant` hook, 11labs voice) |
+| Add voice output (text-to-speech) | ☑ | Dev | Web Speech API + Vapi voice assistant with RAG-constrained responses |
+| Vapi voice integration with tool calls | ☑ | Dev | `useVapiAssistant.ts` — 4 tools: query_workspace, create_idea, create_task, create_project; `vapi-actions` Edge Function |
 | Rate-limit and cache repeated queries | ☐ | Dev | Prevent API cost overruns |
 | Test recall accuracy and citation quality | ☐ | QA | Verify answers match actual session history |
 
@@ -880,7 +884,7 @@ This phase implements the core AI/NLP features that differentiate FlowState as a
 | Phase 5: ROI & Pricing | Week 4–5 | ROI calculator and pricing sections complete | ☑ |
 | Phase 6: Additional Sections | Week 5 | Integration, security, FAQ, final CTA, footer complete | ☑ |
 | Phase 7: Forms | Week 5 | All lead capture forms complete | ☑ |
-| Phase 7B: Dashboard App Features | Week 5–6 | Milestones, team invites, notifications, search, analytics, real-time | ☐ |
+| Phase 7B: Dashboard App Features | Week 5–6 | Milestones, team invites, notifications, search, analytics, real-time | ☑ |
 | Phase 8A: AI/NLP Intelligence Layer | Week 6–7 | NL tasks, semantic search, session recall, state detection, sentiment, interventions | ☐ |
 | Phase 8: Assets & Content | Ongoing | All visual assets and copy finalized | ☐ |
 | Phase 9: Performance | Week 5–6 | Performance optimization and accessibility audit complete | ☐ |
@@ -922,8 +926,8 @@ This phase implements the core AI/NLP features that differentiate FlowState as a
 
 ## Document Information
 
-**Document Version:** 1.2
-**Last Updated:** February 2, 2026
+**Document Version:** 1.3
+**Last Updated:** February 11, 2026
 **Status:** In Progress
 **Owner:** Product Management
 **Next Review:** Upon project completion

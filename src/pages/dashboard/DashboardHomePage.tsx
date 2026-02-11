@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -57,59 +57,67 @@ export default function DashboardHomePage() {
   const [activity, setActivity] = useState<ActivityLog[]>([]);
   const [collaboratorCount, setCollaboratorCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Node inspector state
   const [inspectedNode, setInspectedNode] = useState<BrainNode | null>(null);
 
   const userId = session?.user.id;
 
+  // Re-fetch when an entity is created via AskFlowState
   useEffect(() => {
+    const handler = () => setRefreshKey((k) => k + 1);
+    window.addEventListener("flowstate-action", handler);
+    return () => window.removeEventListener("flowstate-action", handler);
+  }, []);
+
+  const fetchData = useCallback(async () => {
     if (!userId) return;
 
-    async function fetchData() {
-      const [projectsRes, ideasRes, tasksRes, activityRes, collabRes] =
-        await Promise.all([
-          supabase
-            .from("projects")
-            .select("*")
-            .eq("owner_id", userId!)
-            .order("updated_at", { ascending: false })
-            .limit(5),
-          supabase
-            .from("ideas")
-            .select("*")
-            .eq("owner_id", userId!)
-            .order("created_at", { ascending: false })
-            .limit(5),
-          supabase
-            .from("tasks")
-            .select("*")
-            .eq("created_by", userId!)
-            .is("completed_at", null)
-            .order("created_at", { ascending: false })
-            .limit(5),
-          supabase
-            .from("activity_log")
-            .select("*")
-            .eq("user_id", userId!)
-            .order("created_at", { ascending: false })
-            .limit(10),
-          supabase
-            .from("collaborator_notes")
-            .select("id", { count: "exact", head: true })
-            .eq("collaborator_id", userId!),
-        ]);
+    const [projectsRes, ideasRes, tasksRes, activityRes, collabRes] =
+      await Promise.all([
+        supabase
+          .from("projects")
+          .select("*")
+          .eq("owner_id", userId)
+          .order("updated_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("ideas")
+          .select("*")
+          .eq("owner_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("tasks")
+          .select("*")
+          .eq("created_by", userId)
+          .is("completed_at", null)
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("activity_log")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(10),
+        supabase
+          .from("collaborator_notes")
+          .select("id", { count: "exact", head: true })
+          .eq("collaborator_id", userId),
+      ]);
 
-      setProjects(projectsRes.data ?? []);
-      setIdeas(ideasRes.data ?? []);
-      setTasks(tasksRes.data ?? []);
-      setActivity(activityRes.data ?? []);
-      setCollaboratorCount(collabRes.count ?? 0);
-      setLoading(false);
-    }
-
-    fetchData();
+    setProjects(projectsRes.data ?? []);
+    setIdeas(ideasRes.data ?? []);
+    setTasks(tasksRes.data ?? []);
+    setActivity(activityRes.data ?? []);
+    setCollaboratorCount(collabRes.count ?? 0);
+    setLoading(false);
   }, [userId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, refreshKey]);
 
   const firstName =
     session?.user.user_metadata?.full_name?.split(" ")[0] ??

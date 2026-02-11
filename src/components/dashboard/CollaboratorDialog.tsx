@@ -18,6 +18,7 @@ import supabase from "@/supabase";
 import type { CollaboratorNote } from "@/types/database";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
+import { sendNotification } from "@/lib/notifications";
 
 const schema = z.object({
   collaborator_email: z.string().email("Valid email is required"),
@@ -163,6 +164,17 @@ export default function CollaboratorDialog({
         entityType: "collaborator",
         entityId: newCollab?.id,
         metadata: { collaborator_email: data.collaborator_email },
+      });
+
+      // Notify the collaborator
+      sendNotification({
+        userId: userId as string,
+        type: "collaborator_added",
+        title: "You've been added as a collaborator",
+        message: "Someone added you as a collaborator.",
+        entityType: "collaborator",
+        entityId: newCollab?.id,
+        actorId: session.user.id,
       });
     }
 

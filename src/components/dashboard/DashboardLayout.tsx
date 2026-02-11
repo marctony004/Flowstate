@@ -85,7 +85,6 @@ export default function DashboardLayout() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [askAIOpen, setAskAIOpen] = useState(false);
   const [buttonBursting, setButtonBursting] = useState(false);
-  const [actionGlow, setActionGlow] = useState(false);
 
   const expanded = pinned || hovered;
 
@@ -98,9 +97,11 @@ export default function DashboardLayout() {
   };
 
   // Triggered when AskFlowState performs an action (create idea/task/project)
-  const handleAIAction = useCallback(() => {
-    setActionGlow(true);
-    setTimeout(() => setActionGlow(false), 800);
+  // Dispatches a custom event so BrainMapCanvas peripheral nodes can ping
+  const handleAIAction = useCallback((entityType: string) => {
+    window.dispatchEvent(
+      new CustomEvent("flowstate-action", { detail: { entityType } })
+    );
   }, []);
 
   const openSearch = useCallback(() => setSearchOpen(true), []);
@@ -380,8 +381,7 @@ export default function DashboardLayout() {
           onClick={handleAIButtonClick}
           className={cn(
             "group fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl hover:shadow-primary/25 transition-all duration-300 hover:scale-110",
-            buttonBursting && "animate-[buttonBurst_0.3s_ease-out_forwards]",
-            actionGlow && "animate-[successGlow_0.8s_ease-out_forwards]"
+            buttonBursting && "animate-[buttonBurst_0.3s_ease-out_forwards]"
           )}
         >
           {buttonBursting && (
@@ -390,10 +390,6 @@ export default function DashboardLayout() {
               <span className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-accent animate-[burstRing_0.4s_ease-out_forwards]" style={{ animationDelay: '0.1s' }} />
               <span className="absolute inset-0 rounded-full bg-gradient-to-br from-accent to-primary animate-[burstRing_0.4s_ease-out_forwards]" style={{ animationDelay: '0.15s' }} />
             </>
-          )}
-          {/* Green glow ring when action was just performed */}
-          {actionGlow && (
-            <span className="absolute -inset-1 rounded-full bg-green-500/40 blur-md animate-[burstRing_0.8s_ease-out_forwards]" />
           )}
           <span className="absolute -inset-1 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 blur-md opacity-70 group-hover:opacity-100 transition-opacity" />
           <span className="relative flex h-full w-full items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent">

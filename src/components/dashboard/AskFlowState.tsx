@@ -62,7 +62,7 @@ interface Message {
 interface AskFlowStateProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAction?: () => void;
+  onAction?: (entityType: string) => void;
 }
 
 const entityIcons: Record<string, typeof Lightbulb> = {
@@ -199,9 +199,11 @@ export default function AskFlowState({ open, onOpenChange, onAction }: AskFlowSt
       // Persist assistant message
       persistMessage(assistantMessage);
 
-      // Notify parent about performed actions (for button glow)
+      // Notify parent about performed actions (triggers brain map node ping)
       if (data.actions && data.actions.length > 0 && onAction) {
-        onAction();
+        for (const action of data.actions) {
+          onAction(action.type || action.entityType);
+        }
       }
 
     } catch (err) {

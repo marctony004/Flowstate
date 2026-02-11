@@ -331,6 +331,28 @@ export default function BrainMapCanvas({
   const inspectTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [settlePulseId, setSettlePulseId] = useState(0);
 
+  // Action ping — when an entity is created via AskFlowState, ping the matching node
+  const [pingedNodeId, setPingedNodeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const entityToNodeId: Record<string, string> = {
+      idea: "ideas",
+      task: "tasks",
+      project: "projects",
+      collaborator: "collaborators",
+    };
+    const handler = (e: Event) => {
+      const entityType = (e as CustomEvent).detail?.entityType;
+      const nodeId = entityToNodeId[entityType];
+      if (nodeId) {
+        setPingedNodeId(nodeId);
+        setTimeout(() => setPingedNodeId(null), 900);
+      }
+    };
+    window.addEventListener("flowstate-action", handler);
+    return () => window.removeEventListener("flowstate-action", handler);
+  }, []);
+
   // Cleanup pending timer on unmount
   useEffect(() => () => {
     if (inspectTimerRef.current) clearTimeout(inspectTimerRef.current);
@@ -634,6 +656,7 @@ export default function BrainMapCanvas({
               setHoveredId={handleHover}
               onNodeClick={handlePeripheralClick}
               reducedMotion={reducedMotion}
+              isPinged={pingedNodeId === node.id}
             />
           ))}
         </div>
@@ -756,6 +779,7 @@ function PeripheralNode({
   setHoveredId,
   onNodeClick,
   reducedMotion,
+  isPinged,
 }: {
   node: BrainNode;
   index: number;
@@ -765,6 +789,7 @@ function PeripheralNode({
   setHoveredId: (id: string | null) => void;
   onNodeClick: (node: BrainNode) => void;
   reducedMotion: boolean | null;
+  isPinged?: boolean;
 }) {
   const drift = useIdleDrift(index + 1, 3, reducedMotion);
 
@@ -798,63 +823,95 @@ function PeripheralNode({
         transition: "transform 0.3s ease-out",
       }}
     >
-      <motion.button
-        onClick={(e) => {
-          e.stopPropagation();
-          onNodeClick(node);
-        }}
-        onHoverStart={() => setHoveredId(node.id)}
-        onHoverEnd={() => setHoveredId(null)}
-        className="group z-10 flex h-24 w-24 flex-col items-center justify-center rounded-full border border-border/50 bg-card/80 backdrop-blur-sm sm:h-28 sm:w-28"
-        variants={drift}
-        initial={{ scale: 0, opacity: 0 }}
-        animate={nodeVariant}
-        whileHover={{
-          scale: 1.04,
-          opacity: 1,
-          boxShadow: `0 0 20px color-mix(in srgb, ${node.color} 20%, transparent)`,
-          transition: { duration: 0.3, ease: "easeOut" },
-        }}
-        whileTap={{ scale: 0.97, transition: { duration: 0.15 } }}
-        transition={{
-          duration: 0.5,
-          ease: [0.25, 0.1, 0.25, 1],
-          delay: 0.15 + index * 0.08,
-        }}
-      >
-        {/* Soft inner glow — driven by focus state; shimmer on click settle */}
-        {(() => {
-          const isGlowSettling = clickedId === node.id && !reducedMotion && settlePulseId > 0;
-          return (
-            <motion.span
-              key={isGlowSettling ? `glow-${settlePulseId}` : "glow"}
-              className="pointer-events-none absolute inset-0 rounded-full"
+      {/* Ping glow ring — expands outward when entity is created via AskFlowState */}
+      <AnimatePresence>
+        {isPinged && (
+          <motion.span
+            key="ping-ring"
+            className="pointer-events-none absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{ width: "7rem", height: "7rem" }}
+            initial={{ scale: 0.85, opacity: 0.7 }}
+            animate={{ scale: 1.5, opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.75, ease: "easeOut" }}
+          >
+            <span
+              className="block h-full w-full rounded-full"
               style={{
-                boxShadow: `inset 0 0 14px color-mix(in srgb, ${node.color} 10%, transparent)`,
+                boxShadow: `0 0 20px 8px color-mix(in srgb, ${node.color} 40%, transparent)`,
+                border: `2px solid color-mix(in srgb, ${node.color} 35%, transparent)`,
               }}
-              initial={{ opacity: isGlowSettling ? glowOpacity : 0 }}
-              animate={isGlowSettling
-                ? { opacity: [glowOpacity, glowOpacity + 0.12, glowOpacity] }
-                : { opacity: glowOpacity }
-              }
-              transition={isGlowSettling
-                ? { duration: 0.22, ease: "easeOut" }
-                : { duration: 0.3, ease: "easeOut" }
-              }
             />
-          );
-        })()}
-        <node.icon
-          className="h-6 w-6 transition-colors duration-300 sm:h-7 sm:w-7"
-          style={{ color: node.color }}
-        />
-        <span className="mt-1 text-[11px] font-semibold text-foreground sm:text-xs">
-          {node.label}
-        </span>
-        <span className="text-[10px] text-muted-foreground transition-colors duration-300">
-          {node.sublabel}
-        </span>
-      </motion.button>
+          </motion.span>
+        )}
+      </AnimatePresence>
+
+      {/* Bounce wrapper — only animates during ping, doesn't interfere with variant system */}
+      <motion.div
+        animate={isPinged ? { scale: [1, 1.12, 1] } : { scale: 1 }}
+        transition={isPinged
+          ? { duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }
+          : { duration: 0 }
+        }
+      >
+        <motion.button
+          onClick={(e) => {
+            e.stopPropagation();
+            onNodeClick(node);
+          }}
+          onHoverStart={() => setHoveredId(node.id)}
+          onHoverEnd={() => setHoveredId(null)}
+          className="group z-10 flex h-24 w-24 flex-col items-center justify-center rounded-full border border-border/50 bg-card/80 backdrop-blur-sm sm:h-28 sm:w-28"
+          variants={drift}
+          initial={{ scale: 0, opacity: 0 }}
+          animate={nodeVariant}
+          whileHover={{
+            scale: 1.04,
+            opacity: 1,
+            boxShadow: `0 0 20px color-mix(in srgb, ${node.color} 20%, transparent)`,
+            transition: { duration: 0.3, ease: "easeOut" },
+          }}
+          whileTap={{ scale: 0.97, transition: { duration: 0.15 } }}
+          transition={{
+            duration: 0.5,
+            ease: [0.25, 0.1, 0.25, 1],
+            delay: 0.15 + index * 0.08,
+          }}
+        >
+          {/* Soft inner glow — driven by focus state; shimmer on click settle */}
+          {(() => {
+            const isGlowSettling = clickedId === node.id && !reducedMotion && settlePulseId > 0;
+            return (
+              <motion.span
+                key={isGlowSettling ? `glow-${settlePulseId}` : "glow"}
+                className="pointer-events-none absolute inset-0 rounded-full"
+                style={{
+                  boxShadow: `inset 0 0 14px color-mix(in srgb, ${node.color} 10%, transparent)`,
+                }}
+                initial={{ opacity: isGlowSettling ? glowOpacity : 0 }}
+                animate={isGlowSettling
+                  ? { opacity: [glowOpacity, glowOpacity + 0.12, glowOpacity] }
+                  : { opacity: isPinged ? 0.8 : glowOpacity }
+                }
+                transition={isGlowSettling
+                  ? { duration: 0.22, ease: "easeOut" }
+                  : { duration: 0.3, ease: "easeOut" }
+                }
+              />
+            );
+          })()}
+          <node.icon
+            className="h-6 w-6 transition-colors duration-300 sm:h-7 sm:w-7"
+            style={{ color: node.color }}
+          />
+          <span className="mt-1 text-[11px] font-semibold text-foreground sm:text-xs">
+            {node.label}
+          </span>
+          <span className="text-[10px] text-muted-foreground transition-colors duration-300">
+            {node.sublabel}
+          </span>
+        </motion.button>
+      </motion.div>
     </div>
   );
 }

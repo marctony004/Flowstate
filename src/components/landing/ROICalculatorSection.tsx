@@ -37,7 +37,7 @@ export default function ROICalculatorSection() {
           transition={{ duration: 0.5 }}
           className="mx-auto mt-12 max-w-4xl"
         >
-          <div className="grid gap-8 rounded-2xl border border-border/50 bg-card p-8 shadow-sm lg:grid-cols-2">
+          <div className="grid gap-8 rounded-2xl border border-border/50 bg-card/50 p-8 lg:grid-cols-2">
             {/* Sliders */}
             <div className="space-y-8">
               <div>
@@ -111,7 +111,7 @@ export default function ROICalculatorSection() {
           </div>
 
           {/* ROI Report Email Capture */}
-          <div className="mt-6 rounded-xl border border-border/50 bg-card p-6 text-center">
+          <div className="mt-6 rounded-xl border border-border/50 bg-card/50 p-6 text-center">
             {reportSent ? (
               <div className="flex items-center justify-center gap-2 text-sm text-[var(--success)]">
                 <CheckCircle className="h-4 w-4" />

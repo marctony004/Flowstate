@@ -1,4 +1,5 @@
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Mic, Brain, Rocket } from "lucide-react";
 import GradientText from "@/components/reactbits/GradientText";
 import SessionTimeline from "./SessionTimeline";
@@ -25,53 +26,62 @@ const forwardClips: TimelineClip[] = [
 
 const steps = [
   {
-    number: "01",
     icon: Mic,
     title: "Capture",
     description:
       "Hum a hook, drop a voice memo, or jot down lyrics mid-session. FlowState grabs every take and reference without breaking your flow.",
     callout: "Voice memos + stems + references",
-    color: "text-[var(--accent)]",
+    color: "var(--accent)",
+    colorClass: "text-[var(--accent)]",
     bg: "bg-[var(--accent)]/10",
     border: "border-[var(--accent)]/30",
     clips: captureClips,
+    details: [
+      "Auto-tag ideas by type — hook, verse, beat, reference",
+      "Record voice memos directly in-app",
+      "Drag & drop stems, bounces, and files",
+    ],
   },
   {
-    number: "02",
     icon: Brain,
     title: "Understand",
     description:
       "Mix notes, revision requests, and vague feedback like 'make it warmer' — FlowState connects it all to the right session and section.",
     callout: "Mix notes + revisions + feedback",
-    color: "text-[var(--primary)]",
+    color: "var(--primary)",
+    colorClass: "text-[var(--primary)]",
     bg: "bg-[var(--primary)]/10",
     border: "border-[var(--primary)]/30",
     clips: understandClips,
+    details: [
+      "AI links feedback to exact sections and takes",
+      "Collaborator profiles show working preferences",
+      "Semantic search across all sessions and notes",
+    ],
   },
   {
-    number: "03",
     icon: Rocket,
     title: "Move Forward",
     description:
       "See exactly what's left before a bounce: unresolved revisions, missing stems, and final approvals — surfaced only when you're ready.",
     callout: "Milestones + bounce readiness",
-    color: "text-[var(--warning)]",
+    color: "var(--warning)",
+    colorClass: "text-[var(--warning)]",
     bg: "bg-[var(--warning)]/10",
     border: "border-[var(--warning)]/30",
     clips: forwardClips,
+    details: [
+      "Milestone tracking with completion progress",
+      "Automated 'bounce readiness' checklist",
+      "Clear next steps surfaced from session context",
+    ],
   },
 ];
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, delay: i * 0.15 },
-  }),
-};
-
 export default function HowItWorksSection() {
+  const [active, setActive] = useState(0);
+  const step = steps[active];
+
   return (
     <section id="how-it-works" className="py-20 sm:py-28 blend-both">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -86,96 +96,94 @@ export default function HowItWorksSection() {
           </p>
         </div>
 
-        {/* Desktop: Horizontal Timeline */}
-        <div className="mt-16 hidden lg:block">
-          <div className="relative">
-            {/* Connecting line */}
-            <div className="absolute left-0 right-0 top-[68px] h-0.5 bg-gradient-to-r from-[var(--accent)] via-[var(--primary)] to-[var(--warning)]" />
-
-            <div className="grid grid-cols-3 gap-8">
-              {steps.map((step, i) => (
-                <motion.div
-                  key={step.title}
-                  custom={i}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true, margin: "-50px" }}
-                  variants={fadeUp}
-                  className="relative"
-                >
-                  {/* Timeline strip replacing the circle indicator */}
-                  <div className={`relative z-10 mx-auto w-full max-w-[280px] overflow-hidden rounded-lg border ${step.border} ${step.bg} p-2`}>
-                    <SessionTimeline
-                      clips={step.clips}
-                      trackCount={2}
-                      size="sm"
-                      showRuler={false}
-                      showPlayhead={false}
-                      animateIn
-                    />
-                  </div>
-
-                  {/* Content */}
-                  <div className="mt-8 text-center">
-                    <span className={`text-sm font-bold ${step.color}`}>{step.number}</span>
-                    <h3 className="mt-2 text-xl font-semibold text-foreground">
-                      {step.title}
-                    </h3>
-                    <p className="mt-3 leading-relaxed text-muted-foreground">
-                      {step.description}
-                    </p>
-                    <div className={`mt-4 inline-block rounded-full px-4 py-1.5 text-xs font-medium ${step.bg} ${step.color}`}>
-                      {step.callout}
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+        {/* Tabs */}
+        <div className="mt-12 flex justify-center">
+          <div className="inline-flex rounded-xl border border-border/50 bg-card/50 p-1.5 backdrop-blur-sm">
+            {steps.map((s, i) => (
+              <button
+                key={s.title}
+                onClick={() => setActive(i)}
+                className={`relative flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all ${
+                  i === active
+                    ? "text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {i === active && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute inset-0 rounded-lg bg-background border border-border/50"
+                    transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+                  />
+                )}
+                <span className="relative flex items-center gap-2">
+                  <s.icon className="h-4 w-4" style={i === active ? { color: s.color } : undefined} />
+                  {s.title}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Mobile: Stacked Cards */}
-        <div className="mt-12 space-y-6 lg:hidden">
-          {steps.map((step, i) => (
+        {/* Tab Content */}
+        <div className="mt-10">
+          <AnimatePresence mode="wait">
             <motion.div
-              key={step.title}
-              custom={i}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-50px" }}
-              variants={fadeUp}
-              className={`rounded-xl border ${step.border} ${step.bg} p-6`}
+              key={active}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.3 }}
+              className="grid items-center gap-10 lg:grid-cols-2"
             >
-              <div className="flex items-start gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-background">
-                  <step.icon className={`h-7 w-7 ${step.color}`} />
+              {/* Left: Visual */}
+              <div className={`card-elevated rounded-xl ${step.bg} p-4 sm:p-6`}>
+                <div className="rounded-lg border border-border/30 bg-background/80 p-3 backdrop-blur-sm">
+                  <SessionTimeline
+                    clips={step.clips}
+                    trackCount={2}
+                    size="lg"
+                    showRuler
+                    showPlayhead
+                    animateIn
+                  />
                 </div>
-                <div>
-                  <span className={`text-xs font-bold ${step.color}`}>{step.number}</span>
-                  <h3 className="mt-1 text-lg font-semibold text-foreground">
-                    {step.title}
-                  </h3>
+                <div className={`mt-4 inline-block rounded-full px-4 py-1.5 text-xs font-medium ${step.bg} ${step.colorClass}`}>
+                  {step.callout}
                 </div>
               </div>
-              {/* Small timeline strip inside mobile card */}
-              <div className="mt-4 rounded-md border border-border/20 bg-background/50 p-1.5">
-                <SessionTimeline
-                  clips={step.clips}
-                  trackCount={2}
-                  size="sm"
-                  showRuler={false}
-                  showPlayhead={false}
-                  animateIn
-                />
-              </div>
-              <p className="mt-4 leading-relaxed text-muted-foreground">
-                {step.description}
-              </p>
-              <div className={`mt-4 inline-block rounded-full bg-background px-3 py-1 text-xs font-medium ${step.color}`}>
-                {step.callout}
+
+              {/* Right: Text */}
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${step.bg}`}>
+                    <step.icon className={`h-6 w-6 ${step.colorClass}`} />
+                  </div>
+                  <h3 className="text-2xl font-bold text-foreground">{step.title}</h3>
+                </div>
+                <p className="text-lg leading-relaxed text-muted-foreground">
+                  {step.description}
+                </p>
+                <ul className="mt-6 space-y-3">
+                  {step.details.map((detail, i) => (
+                    <motion.li
+                      key={detail}
+                      initial={{ opacity: 0, x: 12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.1 + 0.2 }}
+                      className="flex items-start gap-3"
+                    >
+                      <div
+                        className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: step.color }}
+                      />
+                      <span className="text-sm text-foreground/80">{detail}</span>
+                    </motion.li>
+                  ))}
+                </ul>
               </div>
             </motion.div>
-          ))}
+          </AnimatePresence>
         </div>
       </div>
     </section>

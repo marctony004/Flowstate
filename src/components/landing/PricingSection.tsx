@@ -114,10 +114,10 @@ export default function PricingSection() {
               whileInView="visible"
               viewport={{ once: true, margin: "-50px" }}
               variants={fadeUp}
-              className={`group relative rounded-2xl p-8 backdrop-blur-md transition-shadow duration-300 ${
+              className={`group relative rounded-2xl p-8 transition-shadow duration-300 ${
                 tier.highlighted
                   ? "scale-[1.02] bg-card/80 shadow-xl"
-                  : "border border-border/50 bg-card/60 shadow-sm hover:shadow-md"
+                  : "border border-border/50 bg-card/50"
               }`}
             >
               {/* Animated gradient border for highlighted card */}

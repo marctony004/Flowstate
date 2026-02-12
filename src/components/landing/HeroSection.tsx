@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Lightbulb, MessageSquare, CheckCircle, Play, Square, Circle, StickyNote, Download } from "lucide-react";
 import BlurText from "@/components/reactbits/BlurText";
+import FloatingNodes from "./FloatingNodes";
 import SessionTimeline from "./SessionTimeline";
 import type { TimelineClip } from "./SessionTimeline";
 
@@ -41,6 +42,9 @@ export default function HeroSection() {
         <div className="absolute -bottom-1/4 -left-1/4 h-[500px] w-[500px] rounded-full bg-primary/10 blur-3xl" />
         <div className="absolute top-1/2 left-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-warning/5 blur-3xl" />
       </div>
+
+      {/* Floating node connections */}
+      <FloatingNodes />
 
       {/* Subtle waveform background pattern */}
       <div className="absolute inset-0 z-0 waveform-bg" />
@@ -114,7 +118,7 @@ export default function HeroSection() {
             className="relative"
           >
             {/* Fake app window chrome */}
-            <div className="rounded-xl border border-border/60 bg-card/80 backdrop-blur-sm shadow-xl overflow-hidden">
+            <div className="card-elevated rounded-xl overflow-hidden">
               {/* Title bar */}
               <div className="flex items-center gap-2 border-b border-border/40 px-4 py-2.5">
                 <div className="flex gap-1.5">
@@ -171,12 +175,12 @@ export default function HeroSection() {
               </div>
             </div>
 
-            {/* Floating evidence drawer */}
+            {/* Evidence drawer — below DAW, right-aligned */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.8 }}
-              className="absolute -bottom-6 -left-4 sm:-left-8 w-64 rounded-lg border border-border/50 bg-card/90 backdrop-blur-md p-3 shadow-lg"
+              className="mt-4 ml-auto w-64 rounded-lg border border-border/50 bg-card/90 backdrop-blur-md p-3 shadow-lg"
             >
               <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                 Why FlowState?

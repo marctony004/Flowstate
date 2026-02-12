@@ -65,8 +65,9 @@ export default function ComparisonSection() {
           </p>
         </motion.div>
 
-        {/* Table header */}
-        <div className="mt-14 grid grid-cols-[1fr_1fr_1fr] gap-4 text-sm font-semibold sm:gap-6">
+        {/* Table */}
+        <div className="mt-14">
+        <div className="grid grid-cols-[1fr_1fr_1fr] gap-4 text-sm font-semibold sm:gap-6">
           <div className="text-muted-foreground" />
           <div className="rounded-t-lg border border-b-0 border-red-500/20 bg-red-500/5 px-4 py-3 text-center text-red-400">
             Without FlowState
@@ -113,6 +114,7 @@ export default function ComparisonSection() {
           <div />
           <div className="h-3 rounded-b-lg border border-t-0 border-red-500/20 bg-red-500/5" />
           <div className="h-3 rounded-b-lg border border-t-0 border-[var(--success)]/20 bg-[var(--success)]/5" />
+        </div>
         </div>
       </div>
     </section>

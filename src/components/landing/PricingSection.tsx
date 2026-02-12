@@ -114,49 +114,59 @@ export default function PricingSection() {
               whileInView="visible"
               viewport={{ once: true, margin: "-50px" }}
               variants={fadeUp}
-              className={`relative rounded-2xl border p-8 backdrop-blur-md ${
+              className={`group relative rounded-2xl p-8 backdrop-blur-md transition-shadow duration-300 ${
                 tier.highlighted
-                  ? "scale-[1.02] border-primary bg-card/80 shadow-xl"
-                  : "border-border/50 bg-card/60 shadow-sm"
+                  ? "scale-[1.02] bg-card/80 shadow-xl"
+                  : "border border-border/50 bg-card/60 shadow-sm hover:shadow-md"
               }`}
             >
+              {/* Animated gradient border for highlighted card */}
               {tier.highlighted && (
-                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  Most Popular
-                </Badge>
+                <>
+                  <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%] animate-[shimmer_3s_linear_infinite]" />
+                  <div className="absolute inset-0 rounded-2xl bg-card/95" />
+                </>
               )}
-              <div className="mb-6">
-                <h3 className="text-xl font-semibold text-foreground">
-                  {tier.name}
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {tier.description}
-                </p>
+
+              <div className="relative">
+                {tier.highlighted && (
+                  <Badge className="absolute -top-11 left-1/2 -translate-x-1/2">
+                    Most Popular
+                  </Badge>
+                )}
+                <div className="mb-6">
+                  <h3 className="text-xl font-semibold text-foreground">
+                    {tier.name}
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {tier.description}
+                  </p>
+                </div>
+                <div className="mb-6">
+                  <span className="text-4xl font-bold text-foreground">
+                    {annual ? tier.annualPrice : tier.monthlyPrice}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {tier.period}
+                    {annual && tier.period ? " (billed annually)" : ""}
+                  </span>
+                </div>
+                <ul className="mb-8 space-y-3">
+                  {tier.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--success)]" />
+                      <span className="text-muted-foreground">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  className="w-full"
+                  variant={tier.highlighted ? "default" : "outline"}
+                  asChild
+                >
+                  <Link to="/auth/sign-up">{tier.cta}</Link>
+                </Button>
               </div>
-              <div className="mb-6">
-                <span className="text-4xl font-bold text-foreground">
-                  {annual ? tier.annualPrice : tier.monthlyPrice}
-                </span>
-                <span className="text-muted-foreground">
-                  {tier.period}
-                  {annual && tier.period ? " (billed annually)" : ""}
-                </span>
-              </div>
-              <ul className="mb-8 space-y-3">
-                {tier.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--success)]" />
-                    <span className="text-muted-foreground">{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button
-                className="w-full"
-                variant={tier.highlighted ? "default" : "outline"}
-                asChild
-              >
-                <Link to="/auth/sign-up">{tier.cta}</Link>
-              </Button>
             </motion.div>
           ))}
         </div>

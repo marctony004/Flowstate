@@ -2,6 +2,7 @@ import { useState } from "react";
 import Navbar from "@/components/landing/Navbar";
 import HeroSection from "@/components/landing/HeroSection";
 import BenefitsSection from "@/components/landing/BenefitsSection";
+import ComparisonSection from "@/components/landing/ComparisonSection";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";
 import SocialProofSection from "@/components/landing/SocialProofSection";
 import ProductShowcaseSection from "@/components/landing/ProductShowcaseSection";
@@ -29,6 +30,7 @@ export default function LandingPage() {
         <SocialProofSection />
         <ProductShowcaseSection />
         <ROICalculatorSection />
+        <ComparisonSection />
         <PricingSection />
         <IntegrationSecuritySection />
         <FAQSection />

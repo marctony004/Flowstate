@@ -1,5 +1,6 @@
-import { motion } from "framer-motion";
-import { Star } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Star, ChevronLeft, ChevronRight } from "lucide-react";
 import CountUp from "@/components/reactbits/CountUp";
 import SpotlightCard from "@/components/reactbits/SpotlightCard";
 import GradientText from "@/components/reactbits/GradientText";
@@ -153,6 +154,90 @@ function ScrollColumn({
   );
 }
 
+// Featured testimonials for carousel — one per person, their best quote
+const featured = [testimonials[0], testimonials[3], testimonials[6]];
+
+function FeaturedCarousel() {
+  const [current, setCurrent] = useState(0);
+
+  const next = useCallback(() => setCurrent((p) => (p + 1) % featured.length), []);
+  const prev = useCallback(() => setCurrent((p) => (p - 1 + featured.length) % featured.length), []);
+
+  // Auto-advance every 6 seconds
+  useEffect(() => {
+    const timer = setInterval(next, 6000);
+    return () => clearInterval(timer);
+  }, [next]);
+
+  const t = featured[current];
+
+  return (
+    <div className="relative mt-14 mx-auto max-w-2xl">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={current}
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -40 }}
+          transition={{ duration: 0.35 }}
+          className="rounded-xl border border-border/50 bg-card/80 p-8 text-center backdrop-blur-sm"
+        >
+          <div className="mb-3 flex justify-center gap-0.5">
+            {Array.from({ length: t.stars }).map((_, s) => (
+              <Star
+                key={s}
+                className="h-5 w-5 fill-[var(--warning)] text-[var(--warning)]"
+              />
+            ))}
+          </div>
+          <p className="text-lg leading-relaxed text-foreground">
+            "{t.quote}"
+          </p>
+          <div className="mt-5 flex items-center justify-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+              {t.initials}
+            </div>
+            <div className="text-left">
+              <div className="text-sm font-semibold text-foreground">{t.name}</div>
+              <div className="text-xs text-muted-foreground">{t.role}</div>
+            </div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Navigation arrows */}
+      <button
+        onClick={prev}
+        className="absolute -left-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full border border-border/50 bg-card/80 text-muted-foreground backdrop-blur-sm transition-colors hover:text-foreground hover:border-border sm:-left-12"
+        aria-label="Previous testimonial"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+      <button
+        onClick={next}
+        className="absolute -right-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full border border-border/50 bg-card/80 text-muted-foreground backdrop-blur-sm transition-colors hover:text-foreground hover:border-border sm:-right-12"
+        aria-label="Next testimonial"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+
+      {/* Dots */}
+      <div className="mt-4 flex justify-center gap-2">
+        {featured.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrent(i)}
+            className={`h-2 rounded-full transition-all ${
+              i === current ? "w-6 bg-primary" : "w-2 bg-border"
+            }`}
+            aria-label={`Go to testimonial ${i + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function SocialProofSection() {
   return (
     <section className="bg-secondary/30 py-20 sm:py-28 studio-surface relative blend-both">
@@ -196,6 +281,9 @@ export default function SocialProofSection() {
             <div className="mt-1 text-sm text-muted-foreground">Hours Saved</div>
           </div>
         </div>
+
+        {/* Featured Testimonial Carousel */}
+        <FeaturedCarousel />
 
         {/* Scrolling Testimonial Columns */}
         <div className="relative mt-16 max-h-[600px] overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_10%,black_90%,transparent)]">

@@ -62,7 +62,7 @@ export default function IdeaDialog({
   });
 
   const watchedType = useWatch({ control, name: "type" });
-  const showFileInput = ["voice", "image", "video"].includes(watchedType ?? "");
+  const showFileInput = ["voice", "image", "video", "document"].includes(watchedType ?? "");
 
   useEffect(() => {
     if (open) {
@@ -149,6 +149,25 @@ export default function IdeaDialog({
         type: data.type,
         tags: tags ?? undefined,
       });
+
+      // Fire-and-forget: extract memory from newly uploaded file
+      if (file && payload.file_url && payload.file_type) {
+        supabase.functions
+          .invoke("extract-idea-memory", {
+            body: {
+              ideaId: idea.id,
+              fileUrl: payload.file_url,
+              fileType: payload.file_type,
+              userId: session.user.id,
+              ideaTitle: data.title,
+              ideaContent: data.content || null,
+            },
+          })
+          .catch(() => {});
+        toast.info("Extracting content from your file...", {
+          description: "Summary and transcript will appear shortly.",
+        });
+      }
     } else {
       const { data: newIdea, error } = await supabase
         .from("ideas")
@@ -173,6 +192,25 @@ export default function IdeaDialog({
           type: data.type,
           tags: tags ?? undefined,
         });
+
+        // Fire-and-forget: extract memory from uploaded file
+        if (file && payload.file_url && payload.file_type) {
+          supabase.functions
+            .invoke("extract-idea-memory", {
+              body: {
+                ideaId: newIdea.id,
+                fileUrl: payload.file_url,
+                fileType: payload.file_type,
+                userId: session.user.id,
+                ideaTitle: data.title,
+                ideaContent: data.content || null,
+              },
+            })
+            .catch(() => {});
+          toast.info("Extracting content from your file...", {
+            description: "Summary and transcript will appear shortly.",
+          });
+        }
       }
     }
 
@@ -184,6 +222,7 @@ export default function IdeaDialog({
     voice: "audio/*",
     image: "image/*",
     video: "video/*",
+    document: "application/pdf",
   };
 
   return (
@@ -213,6 +252,7 @@ export default function IdeaDialog({
               <option value="voice">Voice</option>
               <option value="image">Image</option>
               <option value="video">Video</option>
+              <option value="document">Document</option>
             </select>
           </div>
 

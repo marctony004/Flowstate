@@ -157,6 +157,15 @@ export function buildSearchableContent(
     if (Array.isArray(entity.tags) && entity.tags.length > 0) {
       parts.push(`Tags: ${entity.tags.join(", ")}`);
     }
+    // Include extracted memory fields when available
+    if (entity.memory && typeof entity.memory === "object") {
+      const mem = entity.memory as Record<string, unknown>;
+      if (mem.rawTranscript) parts.push(mem.rawTranscript as string);
+      if (mem.summary) parts.push(`Summary: ${mem.summary}`);
+      if (Array.isArray(mem.keyConcepts) && mem.keyConcepts.length > 0) {
+        parts.push(`Concepts: ${(mem.keyConcepts as string[]).join(", ")}`);
+      }
+    }
   } else if (entityType === "task") {
     if (entity.title) parts.push(entity.title as string);
     if (entity.description) parts.push(entity.description as string);

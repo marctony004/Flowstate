@@ -97,6 +97,8 @@ export type Database = {
           file_url: string | null
           id: string
           is_favorite: boolean
+          memory: Json | null
+          memory_status: string
           owner_id: string
           project_id: string | null
           tags: string[] | null
@@ -113,6 +115,8 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_favorite?: boolean
+          memory?: Json | null
+          memory_status?: string
           owner_id: string
           project_id?: string | null
           tags?: string[] | null
@@ -129,6 +133,8 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_favorite?: boolean
+          memory?: Json | null
+          memory_status?: string
           owner_id?: string
           project_id?: string | null
           tags?: string[] | null

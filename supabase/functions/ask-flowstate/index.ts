@@ -104,12 +104,37 @@ Deno.serve(async (req: Request) => {
             if (result.entity_type === "idea") {
                 const { data } = await supabase
                     .from("ideas")
-                    .select("title, type, content, tags")
+                    .select("title, type, content, tags, memory, memory_status")
                     .eq("id", result.entity_id)
                     .single();
                 if (data) {
                     title = data.title;
-                    metadata = data;
+                    // Enrich with memory data if available
+                    if (data.memory_status === "ready" && data.memory) {
+                        const mem = data.memory as Record<string, unknown>;
+                        const enriched: Record<string, unknown> = {
+                            title: data.title,
+                            type: data.type,
+                            content: data.content,
+                            tags: data.tags,
+                        };
+                        if (mem.summary) enriched.summary = mem.summary;
+                        if (mem.rawTranscript) {
+                            const transcript = mem.rawTranscript as string;
+                            enriched.transcript = transcript.length > 500
+                                ? transcript.substring(0, 500) + "..."
+                                : transcript;
+                        }
+                        if (Array.isArray(mem.keyConcepts) && mem.keyConcepts.length > 0)
+                            enriched.concepts = mem.keyConcepts;
+                        if (Array.isArray(mem.extractedDates) && mem.extractedDates.length > 0)
+                            enriched.dates = mem.extractedDates;
+                        if (Array.isArray(mem.detectedTasks) && mem.detectedTasks.length > 0)
+                            enriched.detectedTasks = mem.detectedTasks;
+                        metadata = enriched;
+                    } else {
+                        metadata = data;
+                    }
                 }
             } else if (result.entity_type === "task") {
                 const { data } = await supabase

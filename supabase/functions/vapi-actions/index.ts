@@ -64,13 +64,20 @@ async function handleQueryWorkspace(
     if (r.entity_type === "idea") {
       const { data } = await supabase
         .from("ideas")
-        .select("title, content, type, tags")
+        .select("title, content, type, tags, memory, memory_status")
         .eq("id", r.entity_id)
         .single();
-      if (data)
-        items.push(
-          `[IDEA] "${data.title}" - ${data.content || "No details"}${data.tags?.length ? ` (Tags: ${data.tags.join(", ")})` : ""}`
-        );
+      if (data) {
+        let ideaStr = `[IDEA] "${data.title}" - ${data.content || "No details"}${data.tags?.length ? ` (Tags: ${data.tags.join(", ")})` : ""}`;
+        // Enrich with memory data
+        if (data.memory_status === "ready" && data.memory) {
+          const mem = data.memory as Record<string, unknown>;
+          if (mem.summary) ideaStr += ` | Summary: ${mem.summary}`;
+          if (Array.isArray(mem.keyConcepts) && mem.keyConcepts.length > 0)
+            ideaStr += ` | Concepts: ${(mem.keyConcepts as string[]).join(", ")}`;
+        }
+        items.push(ideaStr);
+      }
     } else if (r.entity_type === "task") {
       const { data } = await supabase
         .from("tasks")

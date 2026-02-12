@@ -10,12 +10,16 @@ import {
   Star,
   Pencil,
   Trash2,
+  Brain,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { Idea } from "@/types/database";
 import IdeaDialog from "@/components/dashboard/IdeaDialog";
+import IdeaMemoryPanel from "@/components/dashboard/IdeaMemoryPanel";
 import DeleteDialog from "@/components/dashboard/DeleteDialog";
 import { toast } from "sonner";
 
@@ -24,6 +28,7 @@ const typeIcons: Record<string, typeof FileText> = {
   voice: Mic,
   image: Image,
   video: Film,
+  document: FileText,
 };
 
 export default function IdeasPage() {
@@ -38,6 +43,8 @@ export default function IdeasPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Idea | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [memoryPanelOpen, setMemoryPanelOpen] = useState(false);
+  const [memoryIdea, setMemoryIdea] = useState<Idea | null>(null);
 
   const fetchIdeas = useCallback(async () => {
     if (!session?.user.id) return;
@@ -53,6 +60,38 @@ export default function IdeasPage() {
   useEffect(() => {
     fetchIdeas();
   }, [fetchIdeas]);
+
+  // Realtime subscription for memory_status changes
+  useEffect(() => {
+    if (!session?.user.id) return;
+
+    const channel = supabase
+      .channel("ideas-memory-status")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "ideas",
+          filter: `owner_id=eq.${session.user.id}`,
+        },
+        (payload) => {
+          const updated = payload.new as Idea;
+          setIdeas((prev) =>
+            prev.map((i) => (i.id === updated.id ? { ...i, ...updated } : i))
+          );
+          // Update memory panel if it's showing this idea
+          setMemoryIdea((prev) =>
+            prev?.id === updated.id ? { ...prev, ...updated } : prev
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session?.user.id]);
 
   async function toggleFavorite(idea: Idea) {
     const { error } = await supabase
@@ -123,7 +162,7 @@ export default function IdeasPage() {
           />
         </div>
         <div className="flex gap-2">
-          {["all", "text", "voice", "image", "video"].map((t) => (
+          {["all", "text", "voice", "image", "video", "document"].map((t) => (
             <button
               key={t}
               onClick={() => setTypeFilter(t)}
@@ -257,6 +296,31 @@ export default function IdeasPage() {
                     </span>
                   ))}
                 </div>
+                {/* Memory status badge */}
+                {idea.memory_status === "processing" && (
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-amber-500">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Extracting memory...
+                  </div>
+                )}
+                {idea.memory_status === "ready" && (
+                  <button
+                    onClick={() => {
+                      setMemoryIdea(idea);
+                      setMemoryPanelOpen(true);
+                    }}
+                    className="mt-2 flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/10"
+                  >
+                    <Brain className="h-3 w-3" />
+                    Memory ready
+                  </button>
+                )}
+                {idea.memory_status === "failed" && (
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-red-500">
+                    <AlertCircle className="h-3 w-3" />
+                    Extraction failed
+                  </div>
+                )}
                 <p className="mt-3 text-xs text-muted-foreground">
                   {new Date(idea.created_at).toLocaleDateString()}
                 </p>
@@ -279,6 +343,12 @@ export default function IdeasPage() {
         onConfirm={handleDelete}
         entityName="Idea"
         loading={deleting}
+      />
+
+      <IdeaMemoryPanel
+        open={memoryPanelOpen}
+        onOpenChange={setMemoryPanelOpen}
+        idea={memoryIdea}
       />
     </div>
   );

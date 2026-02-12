@@ -39,17 +39,10 @@ function MiniWave({ color }: { color: string }) {
 export default function SessionJourneySection() {
   return (
     <section className="relative overflow-hidden py-20 sm:py-28 section-deep">
-      {/* Darker gradient bg */}
-      <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a2e] via-[#16213e] to-[#1a1a2e] dark:from-[#0d0d14] dark:via-[#111827] dark:to-[#0d0d14]" />
-
-      {/* Soft blend edges — feather into adjacent sections */}
-      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-background to-transparent z-[2] pointer-events-none" />
-      <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[var(--primary)] to-transparent z-[2] pointer-events-none opacity-60" />
-
-      {/* Vignette edges */}
-      <div className="absolute inset-0 pointer-events-none" style={{
-        boxShadow: "inset 0 0 120px 60px rgba(0,0,0,0.4)",
-      }} />
+      {/* Background matching hero */}
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
+      <div className="absolute -top-1/4 -right-1/4 h-[500px] w-[500px] rounded-full bg-accent/10 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-1/4 -left-1/4 h-[400px] w-[400px] rounded-full bg-primary/10 blur-3xl pointer-events-none" />
 
       <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         {/* Section title */}
@@ -60,10 +53,10 @@ export default function SessionJourneySection() {
           transition={{ duration: 0.5 }}
           className="text-center mb-14"
         >
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/40 mb-3">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground mb-3">
             Session Journey
           </p>
-          <h2 className="text-2xl font-bold tracking-tight text-white/90 sm:text-3xl">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             From first take to final release
           </h2>
         </motion.div>
@@ -71,7 +64,7 @@ export default function SessionJourneySection() {
         {/* Timeline strip */}
         <div className="relative">
           {/* Connecting line */}
-          <div className="absolute left-0 right-0 top-1/2 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent -translate-y-1/2" />
+          <div className="absolute left-0 right-0 top-1/2 h-px bg-gradient-to-r from-transparent via-border to-transparent -translate-y-1/2" />
 
           {/* Milestone blocks */}
           <div className="relative grid grid-cols-3 gap-3 sm:grid-cols-6 sm:gap-4">
@@ -90,7 +83,7 @@ export default function SessionJourneySection() {
               >
                 {/* Clip block */}
                 <div
-                  className="relative h-14 sm:h-16 rounded-lg border border-white/10 overflow-hidden cursor-default transition-transform duration-200 hover:scale-[1.03]"
+                  className="relative h-14 sm:h-16 rounded-lg border border-border/50 overflow-hidden cursor-default transition-transform duration-200 hover:scale-[1.03]"
                   style={{
                     backgroundColor: `color-mix(in srgb, ${m.color} 20%, transparent)`,
                   }}
@@ -99,7 +92,7 @@ export default function SessionJourneySection() {
 
                   {/* Dot connector */}
                   <div
-                    className="absolute top-1/2 -left-1.5 h-2.5 w-2.5 rounded-full border-2 border-[#1a1a2e] -translate-y-1/2 hidden sm:block"
+                    className="absolute top-1/2 -left-1.5 h-2.5 w-2.5 rounded-full border-2 border-background -translate-y-1/2 hidden sm:block"
                     style={{ backgroundColor: m.color }}
                   />
                 </div>

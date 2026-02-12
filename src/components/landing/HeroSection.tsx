@@ -33,7 +33,7 @@ const stats = [
 
 export default function HeroSection() {
   return (
-    <section className="relative min-h-screen overflow-hidden pt-28 pb-20 sm:pt-36 sm:pb-28 lg:pt-44 lg:pb-36 studio-grain">
+    <section className="relative min-h-screen overflow-hidden pt-28 pb-20 sm:pt-36 sm:pb-28 lg:pt-44 lg:pb-36 studio-grain blend-bottom">
       {/* Background gradient blobs */}
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />

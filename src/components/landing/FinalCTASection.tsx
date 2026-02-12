@@ -6,13 +6,11 @@ import { Clock, CreditCard, XCircle, Sparkles } from "lucide-react";
 
 export default function FinalCTASection({ onScheduleDemo }: { onScheduleDemo?: () => void }) {
   return (
-    <section className="relative overflow-hidden bg-primary py-20 sm:py-28 studio-grain section-deep">
-      {/* Decorative gradient overlay - warmer, more creative */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/95 to-accent/30 opacity-90" />
-
-      {/* Blend edges into neighbors */}
-      <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[#1a1a2e]/80 to-transparent z-[2] pointer-events-none" />
-      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background/40 to-transparent z-[2] pointer-events-none" />
+    <section className="relative overflow-hidden py-20 sm:py-28 section-deep blend-both">
+      {/* Background matching hero */}
+      <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-primary/5" />
+      <div className="absolute -top-1/4 -left-1/4 h-[500px] w-[500px] rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-1/4 -right-1/4 h-[400px] w-[400px] rounded-full bg-accent/10 blur-3xl pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 24 }}
@@ -21,10 +19,10 @@ export default function FinalCTASection({ onScheduleDemo }: { onScheduleDemo?: (
         transition={{ duration: 0.5 }}
         className="relative mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8"
       >
-        <h2 className="text-3xl font-bold tracking-tight text-primary-foreground sm:text-4xl lg:text-5xl">
+        <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
           Ready to Finish What You Started?
         </h2>
-        <p className="mt-6 text-lg leading-relaxed text-primary-foreground/80">
+        <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
           Join 2,000+ producers and artists who stopped losing ideas and started
           shipping tracks. Your 14-day free trial is waiting.
         </p>
@@ -48,13 +46,13 @@ export default function FinalCTASection({ onScheduleDemo }: { onScheduleDemo?: (
           <Button
             size="lg"
             variant="outline"
-            className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
+            className="border-border/50 text-foreground hover:bg-foreground/10"
             onClick={onScheduleDemo}
           >
             Schedule a Demo
           </Button>
         </div>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-primary-foreground/70">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-muted-foreground">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span className="text-sm">14-day trial</span>

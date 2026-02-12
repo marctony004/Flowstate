@@ -1,4 +1,3 @@
-import React from "react";
 import { motion } from "framer-motion";
 
 const lines = [
@@ -10,7 +9,7 @@ const lines = [
 
 export default function ManifestoSection() {
   return (
-    <section className="py-28 sm:py-36 lg:py-44 blend-top" style={{ "--blend-from": "var(--primary)" } as React.CSSProperties}>
+    <section className="py-28 sm:py-36 lg:py-44 blend-both">
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <div className="space-y-8 sm:space-y-10 text-center">
           {lines.map((line, i) => (

@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import Aurora from "@/components/reactbits/Aurora";
 import Navbar from "@/components/landing/Navbar";
 import HeroSection from "@/components/landing/HeroSection";
 import BenefitsSection from "@/components/landing/BenefitsSection";
@@ -39,7 +40,18 @@ export default function LandingPage() {
   const [demoOpen, setDemoOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-screen bg-background">
+      {/* Global aurora background */}
+      <div className="fixed inset-0 z-0 opacity-15 pointer-events-none">
+        <Aurora
+          colorStops={["#3F51B5", "#00BCD4", "#3F51B5"]}
+          amplitude={0.5}
+          blend={0.8}
+          speed={0.15}
+        />
+      </div>
+
+      <div className="relative z-10">
       <Navbar />
       <main>
         <HeroSection />
@@ -72,6 +84,7 @@ export default function LandingPage() {
       </main>
       <Footer />
       <DemoRequestDialog open={demoOpen} onOpenChange={setDemoOpen} />
+      </div>
     </div>
   );
 }

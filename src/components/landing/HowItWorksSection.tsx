@@ -83,8 +83,12 @@ export default function HowItWorksSection() {
   const step = steps[active];
 
   return (
-    <section id="how-it-works" className="py-20 sm:py-28 blend-both">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <section id="how-it-works" className="relative overflow-hidden py-20 sm:py-28 bg-secondary/20 studio-grain blend-both">
+      {/* Ambient blobs */}
+      <div className="absolute -top-1/3 -left-1/4 h-[500px] w-[500px] rounded-full bg-accent/5 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-1/4 -right-1/3 h-[450px] w-[450px] rounded-full bg-primary/5 blur-3xl pointer-events-none" />
+
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             <GradientText colors={["#3F51B5", "#00BCD4", "#8BC34A", "#3F51B5"]} animationSpeed={6}>

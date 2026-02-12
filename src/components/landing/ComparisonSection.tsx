@@ -46,8 +46,12 @@ const fadeUp = {
 
 export default function ComparisonSection() {
   return (
-    <section className="py-20 sm:py-28 blend-both">
-      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+    <section className="relative overflow-hidden py-20 sm:py-28 studio-grain blend-both">
+      {/* Ambient blobs */}
+      <div className="absolute top-1/4 -right-1/4 h-[400px] w-[400px] rounded-full bg-primary/4 blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-1/3 -left-1/4 h-[350px] w-[350px] rounded-full bg-success/4 blur-3xl pointer-events-none" />
+
+      <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}

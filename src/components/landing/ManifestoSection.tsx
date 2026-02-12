@@ -9,8 +9,11 @@ const lines = [
 
 export default function ManifestoSection() {
   return (
-    <section className="py-28 sm:py-36 lg:py-44 blend-both">
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+    <section className="relative overflow-hidden py-28 sm:py-36 lg:py-44 studio-grain blend-both">
+      {/* Ambient blob */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[500px] w-[500px] rounded-full bg-primary/4 blur-3xl pointer-events-none" />
+
+      <div className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <div className="space-y-8 sm:space-y-10 text-center">
           {lines.map((line, i) => (
             <motion.p

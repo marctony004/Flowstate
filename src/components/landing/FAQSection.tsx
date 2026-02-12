@@ -42,7 +42,10 @@ const faqs = [
 
 export default function FAQSection() {
   return (
-    <section id="faq" className="py-20 sm:py-28 section-deep blend-both">
+    <section id="faq" className="relative overflow-hidden py-20 sm:py-28 section-deep studio-grain blend-both">
+      {/* Ambient blob */}
+      <div className="absolute -top-1/4 -left-1/3 h-[400px] w-[400px] rounded-full bg-accent/4 blur-3xl pointer-events-none" />
+
       <div className="relative z-10 mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">

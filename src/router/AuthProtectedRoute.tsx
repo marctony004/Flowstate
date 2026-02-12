@@ -11,29 +11,38 @@ const AuthProtectedRoute = () => {
   useEffect(() => {
     if (!session?.user.id) return;
 
-    // Retry a few times in case the profile trigger hasn't fired yet
-    let attempts = 0;
     let cancelled = false;
-    const check = () => {
-      supabase
-        .from("profiles")
-        .select("onboarded_at")
-        .eq("id", session!.user.id)
-        .single()
-        .then(({ data, error }) => {
-          if (cancelled) return;
-          if (error && attempts < 3) {
-            attempts++;
-            setTimeout(check, 500);
-          } else {
-            // After retries exhausted, treat as onboarded to avoid infinite spinner
-            setOnboarded(error ? true : !!data?.onboarded_at);
-          }
-        });
+    let attempts = 0;
+
+    // Safety timeout — never show spinner for more than 3 seconds
+    const timeout = setTimeout(() => {
+      if (!cancelled) setOnboarded(true);
+    }, 3000);
+
+    const check = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("onboarded_at")
+          .eq("id", session!.user.id)
+          .single();
+        if (cancelled) return;
+        if (error && attempts < 2) {
+          attempts++;
+          setTimeout(check, 500);
+        } else {
+          setOnboarded(error ? true : !!data?.onboarded_at);
+        }
+      } catch {
+        if (!cancelled) setOnboarded(true);
+      }
     };
     check();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
   }, [session?.user.id]);
 
   if (!session) {

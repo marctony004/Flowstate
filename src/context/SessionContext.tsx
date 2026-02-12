@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
 import supabase from "../supabase";
 import LoadingPage from "../pages/LoadingPage";
 import { Session } from "@supabase/supabase-js";
@@ -31,8 +31,16 @@ export const SessionProvider = ({ children }: Props) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const resolvedRef = useRef(false);
 
-  const fetchProfile = async (userId: string) => {
+  const finishLoading = useCallback(() => {
+    if (!resolvedRef.current) {
+      resolvedRef.current = true;
+      setIsLoading(false);
+    }
+  }, []);
+
+  const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data } = await supabase
         .from("profiles")
@@ -43,42 +51,51 @@ export const SessionProvider = ({ children }: Props) => {
     } catch {
       setProfile(null);
     }
-  };
+  }, []);
 
-  const refreshProfile = async () => {
+  const refreshProfile = useCallback(async () => {
     if (session?.user.id) {
       await fetchProfile(session.user.id);
     }
-  };
+  }, [session?.user.id, fetchProfile]);
 
   useEffect(() => {
-    // Explicitly get the initial session — this is the primary path
-    // that resolves the loading state on page refresh.
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      if (session?.user.id) {
-        await fetchProfile(session.user.id);
+    // Safety timeout — never show spinner for more than 4 seconds
+    const timeout = setTimeout(finishLoading, 4000);
+
+    // onAuthStateChange fires INITIAL_SESSION synchronously before
+    // getSession resolves — use it as the primary initialisation path.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      // Fire-and-forget profile fetch — do NOT block finishLoading on it
+      if (newSession?.user.id) {
+        fetchProfile(newSession.user.id);
+      } else {
+        setProfile(null);
       }
-      setIsLoading(false);
-    }).catch(() => {
-      setIsLoading(false);
+      finishLoading();
     });
 
-    // Listen for subsequent auth changes (sign-in, sign-out, token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        if (session?.user.id) {
-          await fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
+    // Fallback: if onAuthStateChange hasn't fired yet (shouldn't happen
+    // in v2.39+ but keeps older clients safe), getSession resolves it.
+    supabase.auth
+      .getSession()
+      .then(({ data: { session: s } }) => {
+        if (!resolvedRef.current) {
+          setSession(s);
+          if (s?.user.id) fetchProfile(s.user.id);
+          finishLoading();
         }
-      }
-    );
+      })
+      .catch(finishLoading);
 
     return () => {
+      clearTimeout(timeout);
       subscription.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isAdmin = profile?.is_admin === true;

@@ -49,14 +49,17 @@ export default function TasksPage() {
   }, [session?.user.id]);
 
   const fetchTasks = useCallback(async () => {
-    if (!session?.user.id) return;
-    const { data } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("created_by", session.user.id)
-      .order("position", { ascending: true });
-    setTasks(data ?? []);
-    setLoading(false);
+    if (!session?.user.id) { setLoading(false); return; }
+    try {
+      const { data } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("created_by", session.user.id)
+        .order("position", { ascending: true });
+      setTasks(data ?? []);
+    } finally {
+      setLoading(false);
+    }
   }, [session?.user.id]);
 
   useEffect(() => {

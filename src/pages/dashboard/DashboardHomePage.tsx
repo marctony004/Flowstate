@@ -72,47 +72,55 @@ export default function DashboardHomePage() {
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
 
-    const [projectsRes, ideasRes, tasksRes, activityRes, collabRes] =
-      await Promise.all([
-        supabase
-          .from("projects")
-          .select("*")
-          .eq("owner_id", userId)
-          .order("updated_at", { ascending: false })
-          .limit(5),
-        supabase
-          .from("ideas")
-          .select("*")
-          .eq("owner_id", userId)
-          .order("created_at", { ascending: false })
-          .limit(5),
-        supabase
-          .from("tasks")
-          .select("*")
-          .eq("created_by", userId)
-          .is("completed_at", null)
-          .order("created_at", { ascending: false })
-          .limit(5),
-        supabase
-          .from("activity_log")
-          .select("*")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false })
-          .limit(10),
-        supabase
-          .from("collaborator_notes")
-          .select("id", { count: "exact", head: true })
-          .eq("collaborator_id", userId),
-      ]);
+    try {
+      const [projectsRes, ideasRes, tasksRes, activityRes, collabRes] =
+        await Promise.all([
+          supabase
+            .from("projects")
+            .select("*")
+            .eq("owner_id", userId)
+            .order("updated_at", { ascending: false })
+            .limit(5),
+          supabase
+            .from("ideas")
+            .select("*")
+            .eq("owner_id", userId)
+            .order("created_at", { ascending: false })
+            .limit(5),
+          supabase
+            .from("tasks")
+            .select("*")
+            .eq("created_by", userId)
+            .is("completed_at", null)
+            .order("created_at", { ascending: false })
+            .limit(5),
+          supabase
+            .from("activity_log")
+            .select("*")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false })
+            .limit(10),
+          supabase
+            .from("collaborator_notes")
+            .select("id", { count: "exact", head: true })
+            .eq("collaborator_id", userId),
+        ]);
 
-    setProjects(projectsRes.data ?? []);
-    setIdeas(ideasRes.data ?? []);
-    setTasks(tasksRes.data ?? []);
-    setActivity(activityRes.data ?? []);
-    setCollaboratorCount(collabRes.count ?? 0);
-    setLoading(false);
+      setProjects(projectsRes.data ?? []);
+      setIdeas(ideasRes.data ?? []);
+      setTasks(tasksRes.data ?? []);
+      setActivity(activityRes.data ?? []);
+      setCollaboratorCount(collabRes.count ?? 0);
+    } catch {
+      // Queries failed — show empty state rather than infinite spinner
+    } finally {
+      setLoading(false);
+    }
   }, [userId]);
 
   useEffect(() => {

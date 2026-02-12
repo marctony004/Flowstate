@@ -8,6 +8,14 @@ const AuthCallbackPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let navigated = false;
+    const go = () => {
+      if (!navigated) {
+        navigated = true;
+        navigate("/dashboard", { replace: true });
+      }
+    };
+
     const code = searchParams.get("code");
 
     if (code) {
@@ -16,37 +24,48 @@ const AuthCallbackPage = () => {
         if (error) {
           setError(error.message);
         } else {
-          navigate("/dashboard", { replace: true });
+          go();
         }
       });
     } else {
       // Implicit flow or hash-based tokens — supabase-js auto-detects.
-      // Listen for the session to be established, then redirect.
+      // Listen for session events (SIGNED_IN or INITIAL_SESSION with valid session).
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange((event, session) => {
-        if (event === "SIGNED_IN" && session) {
+        if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
           subscription.unsubscribe();
-          navigate("/dashboard", { replace: true });
+          go();
         }
       });
 
-      // Also check if already signed in (session may have been set before listener)
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) {
-          subscription.unsubscribe();
-          navigate("/dashboard", { replace: true });
+      // Also poll getSession — catches cases where events already fired
+      const checkSession = async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            subscription.unsubscribe();
+            go();
+          }
+        } catch {
+          // ignore — timeout will catch it
         }
-      });
+      };
+      checkSession();
+      // Retry once more after 1s in case hash is still being processed
+      const retry = setTimeout(checkSession, 1000);
 
       // Timeout fallback — if nothing happens in 5s, show error
       const timeout = setTimeout(() => {
-        setError("Authentication timed out. Please try signing in again.");
+        if (!navigated) {
+          setError("Authentication timed out. Please try signing in again.");
+        }
       }, 5000);
 
       return () => {
         subscription.unsubscribe();
         clearTimeout(timeout);
+        clearTimeout(retry);
       };
     }
   }, [searchParams, navigate]);

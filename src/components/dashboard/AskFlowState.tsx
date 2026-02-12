@@ -83,12 +83,12 @@ export default function AskFlowState({ open, onOpenChange, onAction }: AskFlowSt
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Vapi Assistant
+  // Vapi Assistant — pass onAction so voice-created entities trigger brain map ping
   const {
     status: vapiStatus,
     isSpeechActive,
     toggleCall,
-  } = useVapiAssistant(session?.user.id || "");
+  } = useVapiAssistant(session?.user.id || "", onAction);
 
   const isVapiActive = vapiStatus === VapiStatus.ACTIVE || vapiStatus === VapiStatus.CONNECTING;
 
@@ -204,13 +204,15 @@ export default function AskFlowState({ open, onOpenChange, onAction }: AskFlowSt
       // Notify parent about performed actions (triggers brain map node ping)
       if (data.actions && data.actions.length > 0) {
         for (const action of data.actions) {
-          if (onAction) onAction(action.type || action.entityType);
+          // entityType is "idea"/"task"/"project", type is "create_idea" etc.
+          const entityType = action.entityType || action.type?.replace(/^create_/, "") || "idea";
+          if (onAction) onAction(entityType);
           sendNotification({
             userId: session.user.id,
             type: "ai_action",
-            title: `AI created ${action.type || action.entityType}: ${action.title}`,
-            message: `FlowState assistant created a new ${action.type || action.entityType} for you.`,
-            entityType: action.type || action.entityType,
+            title: `AI created ${entityType}: ${action.title}`,
+            message: `FlowState assistant created a new ${entityType} for you.`,
+            entityType,
             entityId: action.id,
           });
         }
@@ -401,8 +403,8 @@ export default function AskFlowState({ open, onOpenChange, onAction }: AskFlowSt
                   <div className="mt-2 pt-2 border-t border-border/50">
                     <div className="flex flex-wrap gap-1">
                       {message.actions.map((action, idx) => {
-                        const entityType = action.type || action.entityType || "project";
-                        const Icon = entityIcons[entityType] || FolderKanban;
+                        const eType = action.entityType || action.type?.replace(/^create_/, "") || "project";
+                        const Icon = entityIcons[eType] || FolderKanban;
                         return (
                           <Badge
                             key={idx}

@@ -57,57 +57,64 @@ export default function ProjectDetailPage() {
   const [inviteMemberOpen, setInviteMemberOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
-    if (!id) return;
-    const [projectRes, tasksRes, ideasRes, milestonesRes, membersRes] =
-      await Promise.all([
-        supabase.from("projects").select("*").eq("id", id).single(),
-        supabase
-          .from("tasks")
-          .select("*")
-          .eq("project_id", id)
-          .order("position", { ascending: true }),
-        supabase
-          .from("ideas")
-          .select("*")
-          .eq("project_id", id)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("milestones")
-          .select("*")
-          .eq("project_id", id)
-          .order("position", { ascending: true }),
-        supabase
-          .from("project_members")
-          .select("*")
-          .eq("project_id", id)
-          .order("invited_at", { ascending: true }),
-      ]);
-    setProject(projectRes.data);
-    setTasks(tasksRes.data ?? []);
-    setIdeas(ideasRes.data ?? []);
-    setMilestones(milestonesRes.data ?? []);
-
-    // Enrich members with profile data
-    const rawMembers = membersRes.data ?? [];
-    if (rawMembers.length > 0) {
-      const userIds = rawMembers.map((m) => m.user_id);
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, display_name, avatar_url, role")
-        .in("id", userIds);
-
-      const profileMap = new Map(profiles?.map((p) => [p.id, p]));
-      setMembers(
-        rawMembers.map((m) => ({
-          ...m,
-          profile: profileMap.get(m.user_id) ?? null,
-        }))
-      );
-    } else {
-      setMembers([]);
+    if (!id) {
+      setLoading(false);
+      return;
     }
+    try {
+      const [projectRes, tasksRes, ideasRes, milestonesRes, membersRes] =
+        await Promise.all([
+          supabase.from("projects").select("*").eq("id", id).single(),
+          supabase
+            .from("tasks")
+            .select("*")
+            .eq("project_id", id)
+            .order("position", { ascending: true }),
+          supabase
+            .from("ideas")
+            .select("*")
+            .eq("project_id", id)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("milestones")
+            .select("*")
+            .eq("project_id", id)
+            .order("position", { ascending: true }),
+          supabase
+            .from("project_members")
+            .select("*")
+            .eq("project_id", id)
+            .order("invited_at", { ascending: true }),
+        ]);
+      setProject(projectRes.data);
+      setTasks(tasksRes.data ?? []);
+      setIdeas(ideasRes.data ?? []);
+      setMilestones(milestonesRes.data ?? []);
 
-    setLoading(false);
+      // Enrich members with profile data
+      const rawMembers = membersRes.data ?? [];
+      if (rawMembers.length > 0) {
+        const userIds = rawMembers.map((m) => m.user_id);
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, display_name, avatar_url, role")
+          .in("id", userIds);
+
+        const profileMap = new Map(profiles?.map((p) => [p.id, p]));
+        setMembers(
+          rawMembers.map((m) => ({
+            ...m,
+            profile: profileMap.get(m.user_id) ?? null,
+          }))
+        );
+      } else {
+        setMembers([]);
+      }
+    } catch (err) {
+      console.error("Failed to load project data:", err);
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => {

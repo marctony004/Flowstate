@@ -188,16 +188,28 @@ CRITICAL RULES:
   };
 }
 
-export const useVapiAssistant = (userId: string) => {
+export const useVapiAssistant = (
+  userId: string,
+  onAction?: (entityType: string) => void,
+) => {
   const [status, setStatus] = useState<VapiStatus>(VapiStatus.IDLE);
   const [isSpeechActive, setIsSpeechActive] = useState(false);
   const [volumeLevel, setVolumeLevel] = useState(0);
   const [messages, setMessages] = useState<any[]>([]);
   const vapiRef = useRef<Vapi | null>(null);
+  const onActionRef = useRef(onAction);
+  onActionRef.current = onAction;
 
   useEffect(() => {
     const vapi = new Vapi(VAPI_PUBLIC_KEY);
     vapiRef.current = vapi;
+
+    // Map tool names to entity types for brain-map pings
+    const toolToEntity: Record<string, string> = {
+      create_idea: "idea",
+      create_task: "task",
+      create_project: "project",
+    };
 
     // Event listeners
     const onCallStart = () => setStatus(VapiStatus.ACTIVE);
@@ -227,6 +239,43 @@ export const useVapiAssistant = (userId: string) => {
             timestamp: new Date().toISOString(),
           },
         ]);
+      }
+
+      // Detect completed tool calls for create actions → trigger brain map ping
+      // "tool-calls-result" fires AFTER the server responds (entity is in DB)
+      // "tool-calls" fires BEFORE (entity may not exist yet) — use delay as fallback
+      if (message.type === "tool-calls-result") {
+        // Result message — entity is already created, fire immediately
+        const toolCalls = message.toolCallList || message.toolCalls || [];
+        for (const tc of toolCalls) {
+          const name = tc.name || tc.function?.name;
+          const entityType = toolToEntity[name];
+          if (entityType && onActionRef.current) {
+            onActionRef.current(entityType);
+          }
+        }
+      } else if (message.type === "tool-calls") {
+        // Request message — server hasn't finished yet, delay to let DB insert complete
+        const toolCalls = message.toolCallList || message.toolCalls || [];
+        for (const tc of toolCalls) {
+          const name = tc.name || tc.function?.name;
+          const entityType = toolToEntity[name];
+          if (entityType && onActionRef.current) {
+            setTimeout(() => {
+              if (onActionRef.current) onActionRef.current(entityType);
+            }, 2500);
+          }
+        }
+      }
+      // Also handle function-call message type (older Vapi format)
+      if (message.type === "function-call") {
+        const name = message.functionCall?.name || message.name;
+        const entityType = toolToEntity[name];
+        if (entityType && onActionRef.current) {
+          setTimeout(() => {
+            if (onActionRef.current) onActionRef.current(entityType);
+          }, 2500);
+        }
       }
     };
 

@@ -95,7 +95,7 @@ export default function SettingsPage() {
     },
   });
 
-  // Load profile data
+  // Load profile data — also clear loading if profile is null (fetch failed / still pending)
   useEffect(() => {
     if (profile) {
       form.reset({
@@ -113,6 +113,12 @@ export default function SettingsPage() {
       setLoading(false);
     }
   }, [profile, form]);
+
+  // Safety timeout — never show spinner for more than 4 seconds even if profile hasn't loaded
+  useEffect(() => {
+    const timeout = setTimeout(() => setLoading(false), 4000);
+    return () => clearTimeout(timeout);
+  }, []);
 
   // Watch avatar URL for preview
   const watchedAvatarUrl = form.watch("avatar_url");

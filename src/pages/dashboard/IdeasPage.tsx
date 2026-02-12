@@ -47,14 +47,17 @@ export default function IdeasPage() {
   const [memoryIdea, setMemoryIdea] = useState<Idea | null>(null);
 
   const fetchIdeas = useCallback(async () => {
-    if (!session?.user.id) return;
-    const { data } = await supabase
-      .from("ideas")
-      .select("*")
-      .eq("owner_id", session.user.id)
-      .order("created_at", { ascending: false });
-    setIdeas(data ?? []);
-    setLoading(false);
+    if (!session?.user.id) { setLoading(false); return; }
+    try {
+      const { data } = await supabase
+        .from("ideas")
+        .select("*")
+        .eq("owner_id", session.user.id)
+        .order("created_at", { ascending: false });
+      setIdeas(data ?? []);
+    } finally {
+      setLoading(false);
+    }
   }, [session?.user.id]);
 
   useEffect(() => {

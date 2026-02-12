@@ -47,37 +47,39 @@ export default function AnalyticsPage() {
   const userId = session?.user.id;
 
   useEffect(() => {
-    if (!userId) return;
-
     async function fetchData() {
-      const [projRes, taskRes, ideaRes, actRes] = await Promise.all([
-        supabase
-          .from("projects")
-          .select("*")
-          .eq("owner_id", userId!)
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("tasks")
-          .select("*")
-          .eq("created_by", userId!)
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("ideas")
-          .select("*")
-          .eq("owner_id", userId!)
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("activity_log")
-          .select("*")
-          .eq("user_id", userId!)
-          .order("created_at", { ascending: true }),
-      ]);
+      if (!userId) { setLoading(false); return; }
+      try {
+        const [projRes, taskRes, ideaRes, actRes] = await Promise.all([
+          supabase
+            .from("projects")
+            .select("*")
+            .eq("owner_id", userId)
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("tasks")
+            .select("*")
+            .eq("created_by", userId)
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("ideas")
+            .select("*")
+            .eq("owner_id", userId)
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("activity_log")
+            .select("*")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: true }),
+        ]);
 
-      setProjects(projRes.data ?? []);
-      setTasks(taskRes.data ?? []);
-      setIdeas(ideaRes.data ?? []);
-      setActivity(actRes.data ?? []);
-      setLoading(false);
+        setProjects(projRes.data ?? []);
+        setTasks(taskRes.data ?? []);
+        setIdeas(ideaRes.data ?? []);
+        setActivity(actRes.data ?? []);
+      } finally {
+        setLoading(false);
+      }
     }
 
     fetchData();

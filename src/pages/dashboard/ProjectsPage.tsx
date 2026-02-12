@@ -38,14 +38,17 @@ export default function ProjectsPage() {
   const [deleting, setDeleting] = useState(false);
 
   const fetchProjects = useCallback(async () => {
-    if (!session?.user.id) return;
-    const { data } = await supabase
-      .from("projects")
-      .select("*")
-      .eq("owner_id", session.user.id)
-      .order("updated_at", { ascending: false });
-    setProjects(data ?? []);
-    setLoading(false);
+    if (!session?.user.id) { setLoading(false); return; }
+    try {
+      const { data } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("owner_id", session.user.id)
+        .order("updated_at", { ascending: false });
+      setProjects(data ?? []);
+    } finally {
+      setLoading(false);
+    }
   }, [session?.user.id]);
 
   useEffect(() => {

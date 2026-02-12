@@ -23,14 +23,17 @@ export default function CollaboratorsPage() {
   const [deleting, setDeleting] = useState(false);
 
   const fetchCollaborators = useCallback(async () => {
-    if (!session?.user.id) return;
-    const { data } = await supabase
-      .from("collaborator_notes")
-      .select("*")
-      .eq("owner_id", session.user.id)
-      .order("updated_at", { ascending: false });
-    setCollaborators(data ?? []);
-    setLoading(false);
+    if (!session?.user.id) { setLoading(false); return; }
+    try {
+      const { data } = await supabase
+        .from("collaborator_notes")
+        .select("*")
+        .eq("owner_id", session.user.id)
+        .order("updated_at", { ascending: false });
+      setCollaborators(data ?? []);
+    } finally {
+      setLoading(false);
+    }
   }, [session?.user.id]);
 
   useEffect(() => {

@@ -70,7 +70,7 @@ export default function ComparisonSection() {
         </motion.div>
 
         {/* Table */}
-        <div className="mt-14">
+        <div className="mt-14 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm p-4 sm:p-6 shadow-sm">
         <div className="grid grid-cols-[1fr_1fr_1fr] gap-4 text-sm font-semibold sm:gap-6">
           <div className="text-muted-foreground" />
           <div className="rounded-t-lg border border-b-0 border-red-500/20 bg-red-500/5 px-4 py-3 text-center text-red-400">

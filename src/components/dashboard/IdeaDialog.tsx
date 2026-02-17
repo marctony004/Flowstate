@@ -19,7 +19,9 @@ import type { Idea } from "@/types/database";
 import { toast } from "sonner";
 import { Upload, X, Loader2 } from "lucide-react";
 import { logActivity } from "@/lib/activityLogger";
+import { useSessionMemory } from "@/stores/sessionMemoryStore";
 import { useEmbedding } from "@/hooks/useEmbedding";
+import { logSession, buildSessionContent } from "@/lib/sessionLogger";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -141,6 +143,14 @@ export default function IdeaDialog({
         entityId: idea.id,
         metadata: { title: data.title },
       });
+      useSessionMemory.getState().pushAction("ENTITY_EDIT", { entityType: "idea", entityId: idea.id });
+      logSession({
+        userId: session.user.id,
+        eventType: "entity_updated",
+        content: buildSessionContent("updated", "Idea", data.title, { tags: tags ?? undefined, type: data.type }),
+        entityType: "idea",
+        entityId: idea.id,
+      });
 
       // Regenerate embedding with updated content
       embedIdea(idea.id, {
@@ -182,6 +192,14 @@ export default function IdeaDialog({
         entityType: "idea",
         entityId: newIdea?.id,
         metadata: { title: data.title },
+      });
+      useSessionMemory.getState().pushAction("ENTITY_CREATE", { entityType: "idea", entityId: newIdea?.id });
+      logSession({
+        userId: session.user.id,
+        eventType: "idea_captured",
+        content: buildSessionContent("created", "Idea", data.title, { tags: tags ?? undefined, type: data.type, description: data.content }),
+        entityType: "idea",
+        entityId: newIdea?.id,
       });
 
       // Generate embedding in background

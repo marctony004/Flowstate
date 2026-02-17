@@ -13,8 +13,10 @@ import {
   Trash2,
   Users,
   UserPlus,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import type { Project, Task, Idea, Milestone, ProjectMember, Profile } from "@/types/database";
 import ProjectDialog from "@/components/dashboard/ProjectDialog";
@@ -22,6 +24,8 @@ import TaskDialog from "@/components/dashboard/TaskDialog";
 import MilestoneDialog from "@/components/dashboard/MilestoneDialog";
 import InviteMemberDialog from "@/components/dashboard/InviteMemberDialog";
 import DeleteDialog from "@/components/dashboard/DeleteDialog";
+import ProjectStateBadge from "@/components/dashboard/ProjectStateBadge";
+import StuckInterventionDialog from "@/components/dashboard/StuckInterventionDialog";
 import { toast } from "sonner";
 
 interface MemberWithProfile extends ProjectMember {
@@ -29,6 +33,7 @@ interface MemberWithProfile extends ProjectMember {
 }
 
 export default function ProjectDetailPage() {
+  const { session } = useSession();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
@@ -55,6 +60,7 @@ export default function ProjectDetailPage() {
   const [deletingMilestone, setDeletingMilestone] = useState(false);
 
   const [inviteMemberOpen, setInviteMemberOpen] = useState(false);
+  const [stuckDialogOpen, setStuckDialogOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!id) {
@@ -120,6 +126,18 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Auto-detect project state on first load if not yet analyzed
+  useEffect(() => {
+    if (project && !project.ai_state && session?.user.id && id) {
+      supabase.functions
+        .invoke("detect-project-state", {
+          body: { projectId: id, userId: session.user.id },
+        })
+        .then(() => fetchData())
+        .catch(() => {}); // non-critical
+    }
+  }, [project?.id, project?.ai_state, session?.user.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleDeleteProject() {
     if (!project) return;
@@ -281,6 +299,15 @@ export default function ProjectDetailPage() {
             <Button
               variant="outline"
               size="sm"
+              className="border-[var(--warning)]/50 text-[var(--warning)] hover:bg-[color-mix(in_srgb,var(--warning)_10%,transparent)]"
+              onClick={() => setStuckDialogOpen(true)}
+            >
+              <HelpCircle className="mr-1 h-4 w-4" />
+              I'm Stuck
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setEditProjectOpen(true)}
             >
               <Pencil className="mr-1 h-4 w-4" />
@@ -295,6 +322,12 @@ export default function ProjectDetailPage() {
               <Trash2 className="mr-1 h-4 w-4" />
               Delete
             </Button>
+            <ProjectStateBadge
+              projectId={project.id}
+              projectTitle={project.title}
+              aiState={project.ai_state as { state: "evolving" | "stuck" | "ready-to-ship" | "on-hold" | "conceptually-complete"; confidence: number; explanation: string; signals?: string[]; detectedAt: string; overriddenBy?: string } | null}
+              onStateUpdated={fetchData}
+            />
             <span
               className={`rounded-full px-3 py-1 text-xs font-medium ${
                 project.status === "active"
@@ -612,6 +645,14 @@ export default function ProjectDetailPage() {
         onOpenChange={setInviteMemberOpen}
         projectId={id!}
         onSuccess={fetchData}
+      />
+
+      <StuckInterventionDialog
+        open={stuckDialogOpen}
+        onOpenChange={setStuckDialogOpen}
+        projectId={id!}
+        projectTitle={project.title}
+        onTaskCreated={fetchData}
       />
     </div>
   );

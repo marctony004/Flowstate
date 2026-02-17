@@ -141,6 +141,16 @@ export default function CollaboratorDialog({
         entityId: collaborator.id,
         metadata: { collaborator_id: collaborator.collaborator_id },
       });
+
+      // Fire-and-forget sentiment analysis if there's text content
+      if (data.notes || data.strengths || data.working_style || data.communication_pref) {
+        supabase.functions
+          .invoke("analyze-sentiment", {
+            body: { collaboratorNoteId: collaborator.id, userId: session.user.id },
+          })
+          .then(() => onSuccess())
+          .catch((err) => console.error("Sentiment analysis failed:", err));
+      }
     } else {
       // Look up the collaborator's user ID by email
       const { data: userId, error: lookupError } = await supabase
@@ -176,6 +186,16 @@ export default function CollaboratorDialog({
         entityId: newCollab?.id,
         actorId: session.user.id,
       });
+
+      // Fire-and-forget sentiment analysis if there's text content
+      if (newCollab?.id && (data.notes || data.strengths || data.working_style || data.communication_pref)) {
+        supabase.functions
+          .invoke("analyze-sentiment", {
+            body: { collaboratorNoteId: newCollab.id, userId: session.user.id },
+          })
+          .then(() => onSuccess())
+          .catch((err) => console.error("Sentiment analysis failed:", err));
+      }
     }
 
     onOpenChange(false);

@@ -8,6 +8,85 @@ const GEMINI_CHAT_URL = "https://generativelanguage.googleapis.com/v1beta/models
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// --- Rate Limiting ---
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+const RATE_LIMIT_MAX = 15;           // 15 requests per minute per user
+
+interface RateBucket {
+    timestamps: number[];
+}
+
+const rateLimitMap = new Map<string, RateBucket>();
+
+function checkRateLimit(userId: string): { allowed: boolean; retryAfterMs: number } {
+    const now = Date.now();
+    let bucket = rateLimitMap.get(userId);
+
+    if (!bucket) {
+        bucket = { timestamps: [] };
+        rateLimitMap.set(userId, bucket);
+    }
+
+    // Prune timestamps outside window
+    bucket.timestamps = bucket.timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+
+    if (bucket.timestamps.length >= RATE_LIMIT_MAX) {
+        const oldest = bucket.timestamps[0];
+        return { allowed: false, retryAfterMs: RATE_LIMIT_WINDOW_MS - (now - oldest) };
+    }
+
+    bucket.timestamps.push(now);
+    return { allowed: true, retryAfterMs: 0 };
+}
+
+// Periodically clean stale buckets (every 5 min)
+setInterval(() => {
+    const now = Date.now();
+    for (const [userId, bucket] of rateLimitMap) {
+        bucket.timestamps = bucket.timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+        if (bucket.timestamps.length === 0) rateLimitMap.delete(userId);
+    }
+}, 300_000);
+
+// --- Response Cache ---
+const CACHE_TTL_MS = 120_000; // 2 minute TTL
+
+interface CacheEntry {
+    response: AskResponse;
+    createdAt: number;
+}
+
+const responseCache = new Map<string, CacheEntry>();
+
+function getCacheKey(userId: string, question: string): string {
+    // Normalize: lowercase, trim, collapse whitespace
+    const normalized = question.toLowerCase().trim().replace(/\s+/g, " ");
+    return `${userId}:${normalized}`;
+}
+
+function getCachedResponse(key: string): AskResponse | null {
+    const entry = responseCache.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.createdAt > CACHE_TTL_MS) {
+        responseCache.delete(key);
+        return null;
+    }
+    return entry.response;
+}
+
+function setCachedResponse(key: string, response: AskResponse): void {
+    responseCache.set(key, { response, createdAt: Date.now() });
+    // Evict old entries if cache grows too large
+    if (responseCache.size > 200) {
+        const now = Date.now();
+        for (const [k, v] of responseCache) {
+            if (now - v.createdAt > CACHE_TTL_MS) responseCache.delete(k);
+        }
+    }
+}
+
+// --- Types ---
+
 interface AskRequest {
     question: string;
     userId: string;
@@ -26,6 +105,7 @@ interface AskResponse {
     answer: string;
     citations: Citation[];
     confidence: number;
+    cached?: boolean;
 }
 
 const corsHeaders = {
@@ -50,6 +130,37 @@ Deno.serve(async (req: Request) => {
                 JSON.stringify({ error: "question and userId are required" }),
                 { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
+        }
+
+        // Rate limit check
+        const rateCheck = checkRateLimit(userId);
+        if (!rateCheck.allowed) {
+            return new Response(
+                JSON.stringify({
+                    error: "Rate limit exceeded. Please wait a moment before asking another question.",
+                    retryAfterMs: rateCheck.retryAfterMs,
+                }),
+                {
+                    status: 429,
+                    headers: {
+                        ...corsHeaders,
+                        "Content-Type": "application/json",
+                        "Retry-After": String(Math.ceil(rateCheck.retryAfterMs / 1000)),
+                    },
+                }
+            );
+        }
+
+        // Cache check (only for queries without conversation history — contextual follow-ups shouldn't cache)
+        const cacheKey = getCacheKey(userId, question);
+        if (conversationHistory.length === 0) {
+            const cached = getCachedResponse(cacheKey);
+            if (cached) {
+                return new Response(
+                    JSON.stringify({ ...cached, cached: true }),
+                    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+            }
         }
 
         const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -90,7 +201,6 @@ Deno.serve(async (req: Request) => {
 
         if (searchError) {
             console.error("Search error:", searchError);
-            // We continue even if search fails, to at least say "I don't know" or answer from general knowledge if configured
         }
 
         // Step 3: Enrich results with metadata
@@ -109,7 +219,6 @@ Deno.serve(async (req: Request) => {
                     .single();
                 if (data) {
                     title = data.title;
-                    // Enrich with memory data if available
                     if (data.memory_status === "ready" && data.memory) {
                         const mem = data.memory as Record<string, unknown>;
                         const enriched: Record<string, unknown> = {
@@ -166,7 +275,6 @@ Deno.serve(async (req: Request) => {
                 similarity: result.similarity,
             });
 
-            // Build context string
             contextParts.push(
                 `[${result.entity_type.toUpperCase()}: ${title}]\n${JSON.stringify(metadata, null, 2)}`
             );
@@ -228,9 +336,14 @@ ${contextStr}`;
 
         const response: AskResponse = {
             answer,
-            citations: citations.slice(0, 5), // Top 5 citations
+            citations: citations.slice(0, 5),
             confidence: avgSimilarity,
         };
+
+        // Cache the response for repeated queries
+        if (conversationHistory.length === 0) {
+            setCachedResponse(cacheKey, response);
+        }
 
         return new Response(
             JSON.stringify(response),

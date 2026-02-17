@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import SearchDialog, { useSearchShortcut } from "./SearchDialog";
 import AskFlowState from "./AskFlowState";
 import NotificationBell from "./NotificationBell";
+import { useSessionMemory } from "@/stores/sessionMemoryStore";
 
 const navItems = [
   { label: "Session Hub", href: "/dashboard", icon: Disc3 },
@@ -88,6 +89,13 @@ export default function DashboardLayout() {
   const [buttonBursting, setButtonBursting] = useState(false);
 
   const expanded = pinned || hovered;
+
+  // Hydrate session memory from Supabase on mount (idempotent)
+  useEffect(() => {
+    if (session?.user.id) {
+      useSessionMemory.getState().hydrateFromSupabase(session.user.id);
+    }
+  }, [session?.user.id]);
 
   const handleAIButtonClick = () => {
     setButtonBursting(true);

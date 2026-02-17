@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -8,6 +8,7 @@ import {
   Mic,
   Image,
   Film,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,8 +19,10 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { useSession } from "@/context/SessionContext";
+import { useSessionMemory } from "@/stores/sessionMemoryStore";
 import supabase from "@/supabase";
 import BrainMapCanvas, { type BrainNode } from "@/components/dashboard/BrainMapCanvas";
+import StuckInterventionDialog from "@/components/dashboard/StuckInterventionDialog";
 import type { Project, Idea, Task, ActivityLog } from "@/types/database";
 
 const typeIcons: Record<string, typeof FileText> = {
@@ -59,8 +62,26 @@ export default function DashboardHomePage() {
   const [loading, setLoading] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // Relevance scoring — memoised on recentActions reference
+  const recentActions = useSessionMemory((s) => s.recentActions);
+  const relevanceScores = useMemo(
+    () => useSessionMemory.getState().computeRelevance(),
+    [recentActions],
+  );
+
+  // Stuck intervention state
+  const [stuckDialogOpen, setStuckDialogOpen] = useState(false);
+  const [stuckProjectId, setStuckProjectId] = useState<string>("");
+  const [stuckProjectTitle, setStuckProjectTitle] = useState<string>("");
+
   // Node inspector state
   const [inspectedNode, setInspectedNode] = useState<BrainNode | null>(null);
+
+  useEffect(() => {
+    if (inspectedNode) {
+      useSessionMemory.getState().pushAction("INSPECTOR_OPEN", { nodeId: inspectedNode.id });
+    }
+  }, [inspectedNode]);
 
   const userId = session?.user.id;
 
@@ -132,6 +153,15 @@ export default function DashboardHomePage() {
     session?.user.email?.split("@")[0] ??
     "there";
 
+  // Relevance-based panel accent — subtle left border when a category is "hot"
+  const panelAccent = (nodeId: string, color: string): React.CSSProperties => ({
+    transition: "border-color 0.4s ease-out",
+    borderLeft:
+      (relevanceScores[nodeId] ?? 0) > 0.15
+        ? `2px solid ${color}`
+        : "2px solid transparent",
+  });
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -167,9 +197,16 @@ export default function DashboardHomePage() {
         taskCount={tasks.length}
         collaboratorCount={collaboratorCount}
         sessionTitle={projects[0]?.title}
-        onNodeClick={setInspectedNode}
+        relevanceScores={relevanceScores}
+        onNodeClick={(node) => {
+          setInspectedNode(node);
+          useSessionMemory.getState().pushAction("NODE_FOCUS", { nodeId: node.id });
+        }}
         onCenterClick={() => navigate("/dashboard/projects")}
-        onDismiss={() => setInspectedNode(null)}
+        onDismiss={() => {
+          setInspectedNode(null);
+          useSessionMemory.getState().pushAction("NODE_DISMISS");
+        }}
       />
 
       {/* Node Inspector Sheet */}
@@ -233,10 +270,55 @@ export default function DashboardHomePage() {
         </SheetContent>
       </Sheet>
 
+      {/* Feeling stuck? banner */}
+      {projects.length > 0 && (
+        <div className="flex flex-wrap items-center gap-4 rounded-xl border border-[var(--warning)]/30 bg-[color-mix(in_srgb,var(--warning)_5%,transparent)] p-4">
+          <div className="flex items-center gap-2">
+            <HelpCircle className="h-5 w-5 text-[var(--warning)]" />
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Feeling stuck on a project?
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Get AI-powered suggestions tailored to your project.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 ml-auto">
+            <select
+              className="rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground"
+              value={stuckProjectId}
+              onChange={(e) => {
+                const p = projects.find((proj) => proj.id === e.target.value);
+                setStuckProjectId(e.target.value);
+                setStuckProjectTitle(p?.title ?? "");
+              }}
+            >
+              <option value="">Select a project...</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-[var(--warning)]/50 text-[var(--warning)] hover:bg-[color-mix(in_srgb,var(--warning)_10%,transparent)]"
+              disabled={!stuckProjectId}
+              onClick={() => setStuckDialogOpen(true)}
+            >
+              <HelpCircle className="mr-1 h-4 w-4" />
+              Get Unstuck
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Detail panels below the map */}
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Recent Projects */}
-        <div className="rounded-xl border border-border bg-card p-6">
+        <div className="rounded-xl border border-border bg-card p-6" style={panelAccent("projects", "var(--primary)")}>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">
               Recent Projects
@@ -278,7 +360,7 @@ export default function DashboardHomePage() {
         </div>
 
         {/* Recent Ideas */}
-        <div className="rounded-xl border border-border bg-card p-6">
+        <div className="rounded-xl border border-border bg-card p-6" style={panelAccent("ideas", "var(--warning)")}>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">
               Recent Ideas
@@ -354,7 +436,7 @@ export default function DashboardHomePage() {
       </div>
 
       {/* Open Tasks */}
-      <div className="rounded-xl border border-border bg-card p-6">
+      <div className="rounded-xl border border-border bg-card p-6" style={panelAccent("tasks", "var(--success)")}>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">Open Tasks</h2>
           <Button variant="ghost" size="sm" asChild>
@@ -396,6 +478,17 @@ export default function DashboardHomePage() {
           </div>
         )}
       </div>
+
+      {/* Stuck Intervention Dialog */}
+      {stuckProjectId && (
+        <StuckInterventionDialog
+          open={stuckDialogOpen}
+          onOpenChange={setStuckDialogOpen}
+          projectId={stuckProjectId}
+          projectTitle={stuckProjectTitle}
+          onTaskCreated={fetchData}
+        />
+      )}
     </div>
   );
 }

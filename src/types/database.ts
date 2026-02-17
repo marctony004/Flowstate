@@ -53,6 +53,8 @@ export type Database = {
           project_id: string | null
           task_id: string | null
           rating: number | null
+          sentiment_analysis: Json | null
+          sentiment_status: string
           strengths: string | null
           updated_at: string
           working_style: string | null
@@ -67,6 +69,8 @@ export type Database = {
           project_id?: string | null
           task_id?: string | null
           rating?: number | null
+          sentiment_analysis?: Json | null
+          sentiment_status?: string
           strengths?: string | null
           updated_at?: string
           working_style?: string | null
@@ -81,6 +85,8 @@ export type Database = {
           project_id?: string | null
           task_id?: string | null
           rating?: number | null
+          sentiment_analysis?: Json | null
+          sentiment_status?: string
           strengths?: string | null
           updated_at?: string
           working_style?: string | null
@@ -251,6 +257,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          ai_state: Json | null
           bpm: number | null
           completed_at: string | null
           cover_url: string | null
@@ -266,6 +273,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_state?: Json | null
           bpm?: number | null
           completed_at?: string | null
           cover_url?: string | null
@@ -281,6 +289,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_state?: Json | null
           bpm?: number | null
           completed_at?: string | null
           cover_url?: string | null
@@ -361,6 +370,69 @@ export type Database = {
           entity_type?: string | null
           entity_id?: string | null
           actor_id?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      project_memory: {
+        Row: {
+          id: string
+          user_id: string
+          entity_weights: Json
+          attention_patterns: Json
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          entity_weights?: Json
+          attention_patterns?: Json
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          entity_weights?: Json
+          attention_patterns?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      session_logs: {
+        Row: {
+          id: string
+          user_id: string
+          project_id: string | null
+          event_type: string
+          entity_type: string | null
+          entity_id: string | null
+          content: string
+          embedding: string | null
+          metadata: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          project_id?: string | null
+          event_type: string
+          entity_type?: string | null
+          entity_id?: string | null
+          content: string
+          embedding?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          project_id?: string | null
+          event_type?: string
+          entity_type?: string | null
+          entity_id?: string | null
+          content?: string
+          embedding?: string | null
           metadata?: Json | null
           created_at?: string
         }
@@ -452,3 +524,5 @@ export type CollaboratorNote = Tables<"collaborator_notes">
 export type ActivityLog = Tables<"activity_log">
 export type ChatMessage = Tables<"chat_messages">
 export type Notification = Tables<"notifications">
+export type ProjectMemory = Tables<"project_memory">
+export type SessionLog = Tables<"session_logs">

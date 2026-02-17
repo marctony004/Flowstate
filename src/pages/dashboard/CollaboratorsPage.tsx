@@ -6,13 +6,19 @@ import supabase from "@/supabase";
 import type { CollaboratorNote } from "@/types/database";
 import CollaboratorDialog from "@/components/dashboard/CollaboratorDialog";
 import DeleteDialog from "@/components/dashboard/DeleteDialog";
+import SentimentBadge from "@/components/dashboard/SentimentBadge";
+import CollaboratorInsights from "@/components/dashboard/CollaboratorInsights";
 import { toast } from "sonner";
+
+type SentimentFilter = "all" | "positive" | "neutral" | "negative" | "mixed";
 
 export default function CollaboratorsPage() {
   const { session } = useSession();
   const [collaborators, setCollaborators] = useState<CollaboratorNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+
+  const [sentimentFilter, setSentimentFilter] = useState<SentimentFilter>("all");
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editCollab, setEditCollab] = useState<CollaboratorNote | null>(null);
@@ -55,12 +61,16 @@ export default function CollaboratorsPage() {
     fetchCollaborators();
   }
 
-  const filtered = collaborators.filter(
-    (c) =>
+  const filtered = collaborators.filter((c) => {
+    const matchesSearch =
       (c.strengths ?? "").toLowerCase().includes(search.toLowerCase()) ||
       (c.notes ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      c.collaborator_id.toLowerCase().includes(search.toLowerCase())
-  );
+      c.collaborator_id.toLowerCase().includes(search.toLowerCase());
+    if (!matchesSearch) return false;
+    if (sentimentFilter === "all") return true;
+    const sa = c.sentiment_analysis as Record<string, unknown> | null;
+    return sa?.sentiment === sentimentFilter;
+  });
 
   if (loading) {
     return (
@@ -90,17 +100,39 @@ export default function CollaboratorsPage() {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder="Search collaborators..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="h-10 w-full rounded-lg border border-border bg-background pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-        />
+      {/* Search + Sentiment Filter */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search collaborators..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-10 w-full rounded-lg border border-border bg-background pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+        <div className="flex items-center gap-1">
+          {(["all", "positive", "neutral", "negative", "mixed"] as const).map(
+            (f) => (
+              <button
+                key={f}
+                onClick={() => setSentimentFilter(f)}
+                className={`rounded-full px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
+                  sentimentFilter === f
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {f}
+              </button>
+            )
+          )}
+        </div>
       </div>
+
+      {/* Network Insights — conflicts & disagreements */}
+      <CollaboratorInsights collaborators={collaborators} />
 
       {/* Collaborators Grid */}
       {filtered.length === 0 ? (
@@ -194,6 +226,15 @@ export default function CollaboratorsPage() {
                   Prefers: {collab.communication_pref}
                 </p>
               )}
+              <div className="mt-3 border-t border-border pt-3">
+                <SentimentBadge
+                  collaboratorNoteId={collab.id}
+                  collaboratorName={collab.collaborator_id}
+                  sentimentAnalysis={collab.sentiment_analysis}
+                  sentimentStatus={collab.sentiment_status}
+                  onAnalyzed={fetchCollaborators}
+                />
+              </div>
             </div>
           ))}
         </div>

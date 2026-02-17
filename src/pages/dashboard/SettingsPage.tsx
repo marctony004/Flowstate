@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Save, User, Camera, Bell } from "lucide-react";
+import { Save, User, Camera, Bell, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +26,7 @@ import { Switch } from "@/components/ui/switch";
 import { useSession } from "@/context/SessionContext";
 import supabase from "@/supabase";
 import { toast } from "sonner";
+import ClearChatDialog from "@/components/dashboard/ClearChatDialog";
 
 // Validation schema
 const profileSchema = z.object({
@@ -77,6 +78,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [clearChatOpen, setClearChatOpen] = useState(false);
   const [notifPrefs, setNotifPrefs] = useState({
     task_assigned: true,
     member_invited: true,
@@ -405,6 +407,34 @@ export default function SettingsPage() {
           ))}
         </div>
       </div>
+
+      {/* Chat History */}
+      <div className="rounded-xl border border-border bg-card p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <MessageSquare className="h-5 w-5 text-muted-foreground" />
+          <h2 className="text-lg font-semibold text-foreground">Chat History</h2>
+        </div>
+        <p className="mb-2 text-sm text-muted-foreground">
+          Manage your FlowState AI conversation history.
+        </p>
+        <p className="mb-4 text-xs text-muted-foreground/70">
+          Per-message controls: hover over your messages in chat to edit, resend, or delete individually.
+        </p>
+        <Button
+          variant="outline"
+          onClick={() => setClearChatOpen(true)}
+        >
+          Clear Chat History
+        </Button>
+      </div>
+
+      <ClearChatDialog
+        open={clearChatOpen}
+        onOpenChange={setClearChatOpen}
+        onCleared={() => {
+          // No additional UI update needed in settings — the chat panel handles its own state
+        }}
+      />
 
       {/* Danger Zone */}
       <div className="rounded-xl border border-red-500/30 bg-card p-6">

@@ -18,8 +18,10 @@ import supabase from "@/supabase";
 import type { Task } from "@/types/database";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
+import { useSessionMemory } from "@/stores/sessionMemoryStore";
 import { sendNotification } from "@/lib/notifications";
 import { useEmbedding } from "@/hooks/useEmbedding";
+import { logSession, buildSessionContent } from "@/lib/sessionLogger";
 import NLTaskInput from "./NLTaskInput";
 import type { ParsedTask } from "@/lib/nlpTaskParser";
 
@@ -165,6 +167,16 @@ export default function TaskDialog({
       projectId: matchedProjectId,
       metadata: { title: parsed.title, nlParsed: true },
     });
+    useSessionMemory.getState().pushAction("ENTITY_CREATE", { entityType: "task", entityId: newTask?.id });
+    logSession({
+      userId: session.user.id,
+      eventType: "entity_created",
+      content: buildSessionContent("created", "Task", parsed.title, { priority: parsed.priority }),
+      projectId: matchedProjectId,
+      entityType: "task",
+      entityId: newTask?.id,
+      metadata: { nlParsed: true },
+    });
 
     if (newTask?.id) {
       sendNotification({
@@ -214,6 +226,15 @@ export default function TaskDialog({
         projectId: task.project_id,
         metadata: { title: data.title },
       });
+      useSessionMemory.getState().pushAction("ENTITY_EDIT", { entityType: "task", entityId: task.id });
+      logSession({
+        userId: session.user.id,
+        eventType: data.status === "done" ? "task_completed" : "entity_updated",
+        content: buildSessionContent(data.status === "done" ? "completed" : "updated", "Task", data.title, { priority: data.priority, status: data.status }),
+        projectId: task.project_id,
+        entityType: "task",
+        entityId: task.id,
+      });
 
       // Regenerate embedding with updated content
       embedTask(task.id, {
@@ -238,6 +259,15 @@ export default function TaskDialog({
         entityId: newTask?.id,
         projectId: projectIdToUse,
         metadata: { title: data.title },
+      });
+      useSessionMemory.getState().pushAction("ENTITY_CREATE", { entityType: "task", entityId: newTask?.id });
+      logSession({
+        userId: session.user.id,
+        eventType: "entity_created",
+        content: buildSessionContent("created", "Task", data.title, { priority: data.priority, status: data.status, description: data.description }),
+        projectId: projectIdToUse,
+        entityType: "task",
+        entityId: newTask?.id,
       });
 
       // Notify the current user about the new task

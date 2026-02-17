@@ -35,6 +35,8 @@ interface BrainMapCanvasProps {
   onCenterClick: () => void;
   /** Fires when a background click resets focus — parent can close the inspector */
   onDismiss?: () => void;
+  /** Per-node relevance scores (0..1) from session memory — drives ambient glow */
+  relevanceScores?: Record<string, number>;
 }
 
 // ---------------------------------------------------------------------------
@@ -320,6 +322,7 @@ export default function BrainMapCanvas({
   onNodeClick,
   onCenterClick,
   onDismiss,
+  relevanceScores,
 }: BrainMapCanvasProps) {
   const nodes = buildNodes(projectCount, ideaCount, taskCount, collaboratorCount);
   const reducedMotion = useReducedMotion();
@@ -657,6 +660,7 @@ export default function BrainMapCanvas({
               onNodeClick={handlePeripheralClick}
               reducedMotion={reducedMotion}
               isPinged={pingedNodeId === node.id}
+              relevance={relevanceScores?.[node.id] ?? 0}
             />
           ))}
         </div>
@@ -780,6 +784,7 @@ function PeripheralNode({
   onNodeClick,
   reducedMotion,
   isPinged,
+  relevance = 0,
 }: {
   node: BrainNode;
   index: number;
@@ -790,6 +795,7 @@ function PeripheralNode({
   onNodeClick: (node: BrainNode) => void;
   reducedMotion: boolean | null;
   isPinged?: boolean;
+  relevance?: number;
 }) {
   const drift = useIdleDrift(index + 1, 3, reducedMotion);
 
@@ -900,6 +906,19 @@ function PeripheralNode({
               />
             );
           })()}
+
+          {/* Ambient relevance glow — faint halo when not focused */}
+          {relevance > 0.05 && !isSelfFocused && (
+            <span
+              className="pointer-events-none absolute inset-[-4px] rounded-full"
+              style={{
+                boxShadow: `0 0 ${12 + relevance * 10}px color-mix(in srgb, ${node.color} ${Math.round(relevance * 25)}%, transparent)`,
+                opacity: hasFocus ? 0.3 : 1,
+                transition: "box-shadow 0.6s ease-out, opacity 0.4s ease-out",
+              }}
+            />
+          )}
+
           <node.icon
             className="h-6 w-6 transition-colors duration-300 sm:h-7 sm:w-7"
             style={{ color: node.color }}

@@ -18,7 +18,9 @@ import supabase from "@/supabase";
 import type { Project } from "@/types/database";
 import { toast } from "sonner";
 import { logActivity } from "@/lib/activityLogger";
+import { useSessionMemory } from "@/stores/sessionMemoryStore";
 import { useEmbedding } from "@/hooks/useEmbedding";
+import { logSession, buildSessionContent } from "@/lib/sessionLogger";
 
 const schema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -117,6 +119,15 @@ export default function ProjectDialog({
         entityId: project.id,
         metadata: { title: data.title },
       });
+      useSessionMemory.getState().pushAction("ENTITY_EDIT", { entityType: "project", entityId: project.id });
+      logSession({
+        userId: session.user.id,
+        eventType: "entity_updated",
+        content: buildSessionContent("updated", "Project", data.title, { genre: data.genre, status: data.status }),
+        projectId: project.id,
+        entityType: "project",
+        entityId: project.id,
+      });
 
       // Regenerate embedding with updated content
       embedProject(project.id, {
@@ -139,6 +150,15 @@ export default function ProjectDialog({
         entityType: "project",
         entityId: newProject?.id,
         metadata: { title: data.title },
+      });
+      useSessionMemory.getState().pushAction("ENTITY_CREATE", { entityType: "project", entityId: newProject?.id });
+      logSession({
+        userId: session.user.id,
+        eventType: "entity_created",
+        content: buildSessionContent("created", "Project", data.title, { genre: data.genre, status: data.status, description: data.description }),
+        projectId: newProject?.id,
+        entityType: "project",
+        entityId: newProject?.id,
       });
 
       // Generate embedding in background

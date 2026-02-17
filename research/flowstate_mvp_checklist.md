@@ -403,6 +403,135 @@ This checklist details all items required to stand up the **Minimum Viable Produ
 
 ---
 
+## Phase 7C: Session Memory & Brain Map Intelligence (Week 6)
+
+### 7C.1 Session Memory Store
+
+| Item | Status | Owner | Notes |
+|------|--------|-------|-------|
+| Create Zustand `sessionMemoryStore` | ☑ | Dev | `src/stores/sessionMemoryStore.ts` — tracks active node, recent actions, focus history |
+| Implement action types (NODE_FOCUS, ENTITY_CREATE, etc.) | ☑ | Dev | 5 action types with weighted scoring |
+| Implement relevance scoring with exponential decay | ☑ | Dev | 5-minute half-life, normalized 0..1 per node |
+| Create context-aware suggestion chips | ☑ | Dev | `getSuggestions()` returns top-3 relevant suggestions for AskFlowState |
+| Integrate suggestions into AskFlowState empty state | ☑ | Dev | Chips in both empty state and active conversation |
+| Wire pushAction into entity dialogs (Idea, Task, Project) | ☑ | Dev | ENTITY_CREATE dispatched on create/edit |
+| Wire NODE_FOCUS / NODE_DISMISS into BrainMapCanvas | ☑ | Dev | Focus and dismiss actions tracked |
+| Add dev console access (`__sessionMemory`) | ☑ | Dev | getContext, computeRelevance, getSuggestions, getStore |
+
+### 7C.2 Brain Map Visual Intelligence
+
+| Item | Status | Owner | Notes |
+|------|--------|-------|-------|
+| Implement relevance-driven ambient glows on peripheral nodes | ☑ | Dev | Glow opacity/scale proportional to relevance score |
+| Implement ping rings on entity creation | ☑ | Dev | `flowstate-action` custom event triggers visual ping |
+| Camera zoom/pan toward focused node | ☑ | Dev | 1.08x scale with 35% lerp to focal point |
+| Traveling highlights on connector lines | ☑ | Dev | Perimeter loop every 24s |
+| Ghost rings and field pips for depth | ☑ | Dev | 5 ghost rings + 10 ambient breathing pips |
+| Inspector open delay after camera settle | ☑ | Dev | 400ms settle, 300ms on switch |
+| Respect `prefers-reduced-motion` | ☑ | Dev | Motion-reduce class support |
+
+### 7C.3 Dashboard Integration
+
+| Item | Status | Owner | Notes |
+|------|--------|-------|-------|
+| BrainMapCanvas receives relevance scores as prop | ☑ | Dev | `DashboardHomePage` passes computed scores |
+| Detail panels show relevance-accented styling | ☑ | Dev | Score-driven panel highlights |
+| Session memory clears on explicit user action | ☑ | Dev | `clearSession()` resets actions/focus/entities |
+
+---
+
+## Phase 7D: Memory Persistence (Week 6)
+
+### 7D.1 Database & Types
+
+| Item | Status | Owner | Notes |
+|------|--------|-------|-------|
+| Create `project_memory` table (JSONB entity_weights + attention_patterns) | ☑ | Dev | Migration `20260213_create_project_memory.sql`, unique per user_id |
+| Add RLS policies (SELECT, INSERT, UPDATE — user owns row) | ☑ | Dev | 3 policies enforcing `auth.uid() = user_id` |
+| Add `project_memory` types to `database.ts` | ☑ | Dev | Row/Insert/Update + `ProjectMemory` alias |
+
+### 7D.2 Hydration & Flushing
+
+| Item | Status | Owner | Notes |
+|------|--------|-------|-------|
+| Implement `hydrateFromSupabase(userId)` — idempotent | ☑ | Dev | Fetches stored weights, applies 30-day decay |
+| Implement `flushMemory()` — upsert aggregated scores | ☑ | Dev | Merges session actions into persisted weights |
+| Implement `_scheduleFlush()` — 30s debounce | ☑ | Dev | Called after every `pushAction()` |
+| Register `beforeunload` listener for final flush | ☑ | Dev | Ensures data saved on tab close |
+| Trigger hydration in `DashboardLayout` on auth | ☑ | Dev | `useEffect` calls hydrate when `session.user.id` available |
+
+### 7D.3 Blended Relevance Scoring
+
+| Item | Status | Owner | Notes |
+|------|--------|-------|-------|
+| Blend session (70%) + long-term (30%) scores | ☑ | Dev | `SESSION_WEIGHT_ALPHA = 0.7` |
+| Apply 30-day half-life decay to stored weights | ☑ | Dev | `LONG_TERM_HALF_LIFE_DAYS = 30` |
+| Graceful degradation (empty memory if table/fetch fails) | ☑ | Dev | PGRST116 handled, all errors caught |
+| Session-only fallback when not yet hydrated | ☑ | Dev | Backward-compatible — no behavior change pre-hydration |
+
+---
+
+## Phase 7E: Chat Management & Per-Message Controls (Week 6)
+
+### 7E.1 Clear Chat History (Settings)
+
+| Item | Status | Owner | Notes |
+|------|--------|-------|-------|
+| Create `ClearChatDialog` with two options | ☑ | Dev | Option A (local) + Option B (permanent delete) |
+| Option A: localStorage-based local clear | ☑ | Dev | `chatClearStorage.ts` — keyed by userId |
+| Option A: "Restore Chat" to undo local clear | ☑ | Dev | Removes localStorage flag, re-fetches from DB |
+| Option B: Type-DELETE confirmation for permanent delete | ☑ | Dev | Input must match "DELETE" exactly |
+| Option B: Delete all user chat_messages from DB | ☑ | Dev | Supabase delete with `.eq("user_id", userId)` |
+| Add RLS DELETE policy on `chat_messages` | ☑ | Dev | Migration `20260214_chat_messages_delete_policy.sql` |
+| Add "Chat History" section to SettingsPage | ☑ | Dev | Between Notifications and Danger Zone |
+| Wire trash icon in AskFlowState header to ClearChatDialog | ☑ | Dev | Replaces old bare `clearHistory()` |
+
+### 7E.2 Per-Message Edit + Resend
+
+| Item | Status | Owner | Notes |
+|------|--------|-------|-------|
+| Hover actions (Edit/Delete icons) on user messages | ☑ | Dev | Appear to the left of message bubble on hover |
+| Inline edit mode (textarea replaces bubble) | ☑ | Dev | Cancel/Resend buttons, Enter to send, Escape to cancel |
+| Resend creates NEW message (preserves history) | ☑ | Dev | Uses shared `doSend()` pipeline — new user msg + AI reply |
+| Resend disabled when unchanged or empty | ☑ | Dev | Button disabled state |
+| No edit/delete on assistant messages | ☑ | Dev | Actions only rendered for `role === "user"` |
+
+### 7E.3 Per-Message Delete
+
+| Item | Status | Owner | Notes |
+|------|--------|-------|-------|
+| Single message delete with confirmation | ☑ | Dev | Click trash → "Delete?" confirm button |
+| Optimistic UI removal with rollback on error | ☑ | Dev | Reverts to previous messages array on failure |
+| RLS enforces user can only delete own messages | ☑ | Dev | `.eq("user_id", userId)` + DB policy |
+| Toast feedback on success/error | ☑ | Dev | sonner toast notifications |
+
+### 7E.4 Empty State Handling
+
+| Item | Status | Owner | Notes |
+|------|--------|-------|-------|
+| Locally cleared state shows "Chat cleared locally" + Restore button | ☑ | Dev | EyeOff icon, descriptive text, RotateCcw restore |
+| Sending a message auto-restores from local clear | ☑ | Dev | Clears localStorage flag on send |
+| No spinner when locally cleared (skip fetch) | ☑ | Dev | `historyLoaded = true` immediately |
+| Permanent delete leaves clean empty state | ☑ | Dev | Normal empty state with suggestions |
+
+---
+
+## Phase 7F: Idea Memory Extraction (Week 6)
+
+### 7F.1 AI-Powered Idea Analysis
+
+| Item | Status | Owner | Notes |
+|------|--------|-------|-------|
+| Create `extract-idea-memory` Edge Function | ☑ | Dev | Gemini 2.0-flash processes image/audio/video/PDF (up to 15MB) |
+| Extract summary, key concepts, dates, detected tasks | ☑ | Dev | Structured JSON output from Gemini |
+| Store extracted memory in idea `memory` JSONB column | ☑ | Dev | `ideas.memory` + `ideas.memory_status` fields |
+| Create `IdeaMemoryPanel` component | ☑ | Dev | Sheet panel showing analysis results |
+| Display key concepts, dates, detected tasks in panel | ☑ | Dev | Badges and structured list layout |
+| Handle extraction failures gracefully | ☑ | Dev | `memory_status` tracks pending/complete/failed |
+| Support multiple file types | ☑ | Dev | Image, audio, video, PDF via Gemini multimodal |
+
+---
+
 ## Phase 8A: AI/NLP Intelligence Layer (Week 6–7)
 
 This phase implements the core AI/NLP features that differentiate FlowState as a "Creative Intelligence OS." These features require backend NLP processing (Supabase Edge Functions or external API) and semantic embedding infrastructure.
@@ -440,66 +569,66 @@ This phase implements the core AI/NLP features that differentiate FlowState as a
 
 | Item | Status | Owner | Notes |
 |------|--------|-------|-------|
-| Create `session_logs` table | ☐ | Dev | project_id, user_id, content, timestamp, embedding |
+| Create `session_logs` table | ☑ | Dev | Migration `20260215_create_session_logs.sql` — user_id, project_id, event_type, entity_type, entity_id, content, embedding (vector 768), metadata JSONB; RLS + indexes |
 | Create AskFlowState component | ☑ | Dev | Full voice assistant with chat UI, voice input/output |
 | Implement retrieval-augmented generation (RAG) | ☑ | Dev | `ask-flowstate` v17 — embeds question, pgvector search, Gemini 2.5 Flash answer |
 | Display answers with evidence | ☑ | Dev | Citations with entity type badges, links to sources |
-| Add session log capture on key events | ☐ | Dev | Note creation, task completion, collaborator feedback |
+| Add session log capture on key events | ☑ | Dev | `logSession()` + `buildSessionContent()` in `sessionLogger.ts`; hooked into ProjectDialog, IdeaDialog, TaskDialog |
 | Implement conversation history in AskFlowState | ☑ | Dev | Multi-turn Q&A with conversation context |
 | Add AskFlowState to ProjectDetailPage | ☑ | Dev | Floating button in DashboardLayout (accessible everywhere) |
 | Add voice input (speech-to-text) | ☑ | Dev | Web Speech API + Vapi voice assistant (`useVapiAssistant` hook, 11labs voice) |
 | Add voice output (text-to-speech) | ☑ | Dev | Web Speech API + Vapi voice assistant with RAG-constrained responses |
 | Vapi voice integration with tool calls | ☑ | Dev | `useVapiAssistant.ts` — 4 tools: query_workspace, create_idea, create_task, create_project; `vapi-actions` Edge Function |
-| Rate-limit and cache repeated queries | ☐ | Dev | Prevent API cost overruns |
+| Rate-limit and cache repeated queries | ☑ | Dev | 15 req/min sliding window rate limiter + 2-min TTL response cache in `ask-flowstate`; 429 handling in AskFlowState UI |
 | Test recall accuracy and citation quality | ☐ | QA | Verify answers match actual session history |
 
 ### 8A.4 Semantic Project State Detection
 
 | Item | Status | Owner | Notes |
 |------|--------|-------|-------|
-| Define project state taxonomy | ☐ | Dev | "evolving", "stuck", "ready to ship", "on hold", "conceptually complete" |
-| Implement state detection Edge Function | ☐ | Dev | Analyze recent activity, notes, task progress, language signals |
-| Create ProjectStateBadge component | ☐ | Dev | Display detected state with color coding |
-| Add "Why this state?" explanation | ☐ | Dev | Show evidence: "No tasks completed in 14 days", "Repeated mentions of 'blocked'" |
-| Display state on ProjectCard and ProjectDetailPage | ☐ | Dev | Badge with tooltip or expandable explanation |
-| Allow manual state override | ☐ | Dev | User can correct if AI is wrong |
-| Trigger state recalculation on project changes | ☐ | Dev | Debounced recalculation on activity |
+| Define project state taxonomy | ☑ | Dev | 5 states: evolving, stuck, ready-to-ship, on-hold, conceptually-complete — in `stateConfig` with icons, colors |
+| Implement state detection Edge Function | ☑ | Dev | `detect-project-state` — gathers tasks/ideas/milestones/activity, Gemini 1.5 Flash classification + heuristic fallback |
+| Create ProjectStateBadge component | ☑ | Dev | Color-coded badge with icon, compact & full modes, Popover detail panel |
+| Add "Why this state?" explanation | ☑ | Dev | `StateDetails` sub-component: confidence %, explanation text, signal list bullets |
+| Display state on ProjectCard and ProjectDetailPage | ☑ | Dev | Compact badge on ProjectsPage cards, full badge + auto-detect on ProjectDetailPage header |
+| Allow manual state override | ☑ | Dev | Override dropdown in StateDetails popover, writes `overriddenBy: userId` to `ai_state` JSONB |
+| Trigger state recalculation on project changes | ☑ | Dev | "Re-analyze" button in popover + auto-detect on first ProjectDetailPage load when `ai_state` is null |
 | Test state detection accuracy | ☐ | QA | Verify states match actual project health |
 
 ### 8A.5 Sentiment Analysis on Collaborator Feedback
 
 | Item | Status | Owner | Notes |
 |------|--------|-------|-------|
-| Implement sentiment analysis Edge Function | ☐ | Dev | Analyze collaborator notes for tone (positive, neutral, negative, frustrated) |
-| Create SentimentBadge component | ☐ | Dev | Small icon/color indicator on collaborator notes |
-| Store sentiment scores in collaborator_notes table | ☐ | Dev | Add sentiment column (enum or score) |
-| Display sentiment trends on CollaboratorsPage | ☐ | Dev | "Maya's feedback has been increasingly frustrated" |
-| Surface disagreements and conflicts | ☐ | Dev | Detect contradictory feedback across collaborators |
-| Add sentiment filter to collaborator notes list | ☐ | Dev | Filter by positive/negative/neutral |
+| Implement sentiment analysis Edge Function | ☑ | Dev | `analyze-sentiment` Edge Function — Gemini 1.5 Flash, classifies positive/neutral/negative/mixed with tone, keyThemes, suggestions |
+| Create SentimentBadge component | ☑ | Dev | `SentimentBadge.tsx` — color-coded badge with Popover details, analyze/re-analyze buttons |
+| Store sentiment scores in collaborator_notes table | ☑ | Dev | Migration `20260215_add_sentiment_to_collaborator_notes.sql` — `sentiment_analysis` JSONB + `sentiment_status` TEXT |
+| Display sentiment trends on CollaboratorsPage | ☑ | Dev | `CollaboratorInsights` component — network health summary, conflict detection, theme analysis |
+| Surface disagreements and conflicts | ☑ | Dev | `CollaboratorInsights` detects contradictory sentiment, opposing themes, and friction points across collaborators |
+| Add sentiment filter to collaborator notes list | ☑ | Dev | Filter chips (all, positive, neutral, negative, mixed) on CollaboratorsPage |
 | Test sentiment accuracy | ☐ | QA | Verify tone detection matches human interpretation |
 
 ### 8A.6 Creative Block Intervention ("I'm Stuck")
 
 | Item | Status | Owner | Notes |
 |------|--------|-------|-------|
-| Create "I'm Stuck" button/trigger | ☐ | Dev | Accessible from ProjectDetailPage and dashboard |
-| Implement blocker detection Edge Function | ☐ | Dev | Analyze project history for recurring blockers, stalled tasks |
-| Generate contextual suggestions | ☐ | Dev | Questions, reframes, constraints (not generic content) |
-| Display suggestions in StuckInterventionDialog | ☐ | Dev | "Try finishing just the intro today", "What's blocking the vocals?" |
-| Log interventions and outcomes | ☐ | Dev | Track if suggestions helped (user feedback) |
-| Learn from intervention history | ☐ | Dev | Improve suggestions based on what worked before |
+| Create "I'm Stuck" button/trigger | ☑ | Dev | "I'm Stuck" button on ProjectDetailPage header + "Feeling stuck?" banner on DashboardHomePage |
+| Implement blocker detection Edge Function | ☑ | Dev | `creative-block-help` Edge Function — Gemini 1.5 Flash, analyzes tasks/ideas/milestones/activity for blocker type |
+| Generate contextual suggestions | ☑ | Dev | 3-5 typed suggestions (question, reframe, constraint, micro-task, perspective) referencing actual project entities |
+| Display suggestions in StuckInterventionDialog | ☑ | Dev | `StuckInterventionDialog.tsx` — 3-step UI (context → loading → results) with type-coded cards |
+| Log interventions and outcomes | ☑ | Dev | `creative_block_intervention` + `creative_block_feedback` event types in session_logs |
+| Learn from intervention history | ☑ | Dev | Past interventions + feedback queried and included in Gemini prompt for improved suggestions |
 | Test intervention relevance | ☐ | QA | Verify suggestions are contextual, not generic |
 
 ### 8A.7 Explainable Insights UI ("Why?")
 
 | Item | Status | Owner | Notes |
 |------|--------|-------|-------|
-| Create WhyDrawer component | ☐ | Dev | Slide-out panel showing evidence for any AI insight |
-| Define evidence schema | ☐ | Dev | source_type, source_id, quote, timestamp, relevance_score |
-| Add "Why?" button to all AI-generated insights | ☐ | Dev | Project state, sentiment, suggestions, search results |
-| Display evidence with links to source | ☐ | Dev | Click to navigate to original note/task/session |
-| Highlight relevant quotes in evidence | ☐ | Dev | Bold or highlight the key phrase |
-| Allow user to flag incorrect insights | ☐ | Dev | "This is wrong" feedback for model improvement |
+| Create WhyDrawer component | ☑ | Dev | `WhyDrawer.tsx` — reusable Sheet panel with evidence groups, confidence, and flag mechanism |
+| Define evidence schema | ☑ | Dev | `WhyEvidence` interface — insightType, evidenceGroups, confidence, explanation, entityType/entityId |
+| Add "Why?" button to all AI-generated insights | ☑ | Dev | ProjectStateBadge, SentimentBadge, StuckInterventionDialog, CollaboratorInsights |
+| Display evidence with links to source | ☑ | Dev | Evidence groups with label/value pairs, quotes, source labels |
+| Highlight relevant quotes in evidence | ☑ | Dev | `highlight` flag on evidence items for bold/accent styling |
+| Allow user to flag incorrect insights | ☑ | Dev | "Flag as Incorrect" with confirmation → `insight_flagged` session log event |
 | Test explainability clarity | ☐ | QA | Users understand why AI made each suggestion |
 
 ### 8A.8 Infrastructure & API Integration
@@ -508,10 +637,10 @@ This phase implements the core AI/NLP features that differentiate FlowState as a
 |------|--------|-------|-------|
 | Set up OpenAI API integration | ☑ | Dev | Using Gemini API (gemini-embedding-001 + gemini-2.5-flash) instead of OpenAI |
 | Create secure API key management | ☑ | Dev | GEMINI_API_KEY stored in Supabase secrets, not client-side |
-| Implement rate limiting and cost controls | ☐ | Dev | Daily/monthly caps, usage monitoring |
+| Implement rate limiting and cost controls | ☑ | Dev | 15 req/min sliding-window rate limiter in `ask-flowstate` with `Map<string, RateBucket>`, 429 + Retry-After |
 | Create NLP Edge Function base template | ☐ | Dev | Reusable structure for all NLP functions |
-| Add error handling and fallbacks | ☐ | Dev | Graceful degradation when API unavailable |
-| Implement response caching | ☐ | Dev | Cache embeddings and repeated queries |
+| Add error handling and fallbacks | ☑ | Dev | `detect-project-state` heuristic fallback when Gemini fails; `ask-flowstate` cache/rate-limit graceful 429; all edge functions catch errors |
+| Implement response caching | ☑ | Dev | 2-min TTL in-memory cache in `ask-flowstate` (normalized keys, max 200 entries, eviction) |
 | Monitor API usage and costs | ☐ | Dev | Dashboard or alerts for usage spikes |
 | Document NLP architecture | ☐ | Dev | README for future maintenance |
 
@@ -885,7 +1014,11 @@ This phase implements the core AI/NLP features that differentiate FlowState as a
 | Phase 6: Additional Sections | Week 5 | Integration, security, FAQ, final CTA, footer complete | ☑ |
 | Phase 7: Forms | Week 5 | All lead capture forms complete | ☑ |
 | Phase 7B: Dashboard App Features | Week 5–6 | Milestones, team invites, notifications, search, analytics, real-time | ☑ |
-| Phase 8A: AI/NLP Intelligence Layer | Week 6–7 | NL tasks, semantic search, session recall, state detection, sentiment, interventions | ☐ |
+| Phase 7C: Session Memory & Brain Map Intelligence | Week 6 | Relevance scoring, suggestion chips, brain map glows, ping rings | ☑ |
+| Phase 7D: Memory Persistence | Week 6 | project_memory table, hydration, 30s flush, blended scoring | ☑ |
+| Phase 7E: Chat Management & Per-Message Controls | Week 6 | Clear chat (local/permanent), edit+resend, single delete, RLS | ☑ |
+| Phase 7F: Idea Memory Extraction | Week 6 | Gemini multimodal extraction, IdeaMemoryPanel | ☑ |
+| Phase 8A: AI/NLP Intelligence Layer | Week 6–7 | NL tasks, semantic search, session recall, state detection, sentiment, interventions | ◐ |
 | Phase 8: Assets & Content | Ongoing | All visual assets and copy finalized | ☐ |
 | Phase 9: Performance | Week 5–6 | Performance optimization and accessibility audit complete | ☐ |
 | Phase 10: Analytics | Week 5–6 | Analytics and SEO implementation complete | ☐ |
@@ -926,8 +1059,8 @@ This phase implements the core AI/NLP features that differentiate FlowState as a
 
 ## Document Information
 
-**Document Version:** 1.3
-**Last Updated:** February 11, 2026
+**Document Version:** 1.5
+**Last Updated:** February 15, 2026
 **Status:** In Progress
 **Owner:** Product Management
 **Next Review:** Upon project completion

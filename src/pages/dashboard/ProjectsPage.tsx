@@ -15,6 +15,7 @@ import supabase from "@/supabase";
 import type { Project } from "@/types/database";
 import ProjectDialog from "@/components/dashboard/ProjectDialog";
 import DeleteDialog from "@/components/dashboard/DeleteDialog";
+import ProjectStateBadge from "@/components/dashboard/ProjectStateBadge";
 import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
@@ -224,6 +225,15 @@ export default function ProjectsPage() {
                       {new Date(project.due_date).toLocaleDateString()}
                     </span>
                   )}
+                </div>
+                <div className="mt-2" onClick={(e) => e.preventDefault()}>
+                  <ProjectStateBadge
+                    projectId={project.id}
+                    projectTitle={project.title}
+                    aiState={project.ai_state as { state: "evolving" | "stuck" | "ready-to-ship" | "on-hold" | "conceptually-complete"; confidence: number; explanation: string; signals?: string[]; detectedAt: string; overriddenBy?: string } | null}
+                    onStateUpdated={fetchProjects}
+                    compact
+                  />
                 </div>
               </Link>
             </div>

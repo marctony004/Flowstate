@@ -19,7 +19,8 @@ export type SessionEventType =
   | "project_status_changed"
   | "creative_block_intervention"
   | "creative_block_feedback"
-  | "insight_flagged";
+  | "insight_flagged"
+  | "api_usage";
 
 interface LogSessionParams {
   userId: string;

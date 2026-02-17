@@ -638,11 +638,11 @@ This phase implements the core AI/NLP features that differentiate FlowState as a
 | Set up OpenAI API integration | ☑ | Dev | Using Gemini API (gemini-embedding-001 + gemini-2.5-flash) instead of OpenAI |
 | Create secure API key management | ☑ | Dev | GEMINI_API_KEY stored in Supabase secrets, not client-side |
 | Implement rate limiting and cost controls | ☑ | Dev | 15 req/min sliding-window rate limiter in `ask-flowstate` with `Map<string, RateBucket>`, 429 + Retry-After |
-| Create NLP Edge Function base template | ☐ | Dev | Reusable structure for all NLP functions |
+| Create NLP Edge Function base template | ☑ | Dev | `_shared/nlp-helpers.ts` — CORS, Supabase client, Gemini chat/embed wrappers, JSON parsing, error helpers, usage logging |
 | Add error handling and fallbacks | ☑ | Dev | `detect-project-state` heuristic fallback when Gemini fails; `ask-flowstate` cache/rate-limit graceful 429; all edge functions catch errors |
 | Implement response caching | ☑ | Dev | 2-min TTL in-memory cache in `ask-flowstate` (normalized keys, max 200 entries, eviction) |
-| Monitor API usage and costs | ☐ | Dev | Dashboard or alerts for usage spikes |
-| Document NLP architecture | ☐ | Dev | README for future maintenance |
+| Monitor API usage and costs | ☑ | Dev | `ai-usage-stats` Edge Function + AI Usage panel on Settings page — event counts, daily trend chart, totals |
+| Document NLP architecture | ☑ | Dev | `_shared/README.md` — helper API docs, function inventory, conventions |
 
 ---
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Save, User, Camera, Bell, MessageSquare } from "lucide-react";
+import { Save, User, Camera, Bell, MessageSquare, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -436,6 +436,9 @@ export default function SettingsPage() {
         }}
       />
 
+      {/* AI Usage */}
+      <AiUsagePanel userId={session?.user.id} />
+
       {/* Danger Zone */}
       <div className="rounded-xl border border-red-500/30 bg-card p-6">
         <h2 className="mb-2 text-lg font-semibold text-red-500">Danger Zone</h2>
@@ -450,6 +453,160 @@ export default function SettingsPage() {
           Sign Out
         </Button>
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AI Usage Panel
+// ---------------------------------------------------------------------------
+
+interface UsageStats {
+  period: { days: number; since: string };
+  totalEvents: number;
+  byEventType: Record<string, number>;
+  byFunction: Record<string, number>;
+  dailyTrend: Array<{ date: string; count: number }>;
+  totals: {
+    embeddings: number;
+    projectsWithAiState: number;
+    analyzedSentiments: number;
+  };
+}
+
+function AiUsagePanel({ userId }: { userId?: string }) {
+  const [stats, setStats] = useState<UsageStats | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function fetchStats() {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams({ days: "7" });
+      if (userId) params.set("userId", userId);
+      const { data, error: fnError } = await supabase.functions.invoke(
+        "ai-usage-stats"
+      );
+      if (fnError) throw fnError;
+      setStats(data as UsageStats);
+    } catch (err) {
+      console.error("Failed to fetch AI usage stats:", err);
+      setError("Could not load usage stats");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchStats();
+  }, [userId]);
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-5 w-5 text-[var(--accent)]" />
+          <h2 className="text-lg font-semibold text-foreground">AI Usage</h2>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 px-2 text-xs"
+          onClick={fetchStats}
+          disabled={loading}
+        >
+          <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </div>
+
+      {error && (
+        <p className="text-sm text-muted-foreground">{error}</p>
+      )}
+
+      {!stats && !error && (
+        <p className="text-sm text-muted-foreground">Loading usage data...</p>
+      )}
+
+      {stats && (
+        <div className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Last 7 days · {stats.totalEvents} AI events
+          </p>
+
+          {/* Summary cards */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-lg border border-border bg-muted/30 p-3 text-center">
+              <p className="text-lg font-bold text-foreground">
+                {stats.totals.embeddings}
+              </p>
+              <p className="text-[10px] text-muted-foreground">Embeddings</p>
+            </div>
+            <div className="rounded-lg border border-border bg-muted/30 p-3 text-center">
+              <p className="text-lg font-bold text-foreground">
+                {stats.totals.projectsWithAiState}
+              </p>
+              <p className="text-[10px] text-muted-foreground">AI States</p>
+            </div>
+            <div className="rounded-lg border border-border bg-muted/30 p-3 text-center">
+              <p className="text-lg font-bold text-foreground">
+                {stats.totals.analyzedSentiments}
+              </p>
+              <p className="text-[10px] text-muted-foreground">Sentiments</p>
+            </div>
+          </div>
+
+          {/* Daily trend */}
+          {stats.dailyTrend.length > 0 && (
+            <div>
+              <p className="mb-2 text-[11px] font-medium text-foreground">
+                Daily Activity
+              </p>
+              <div className="flex items-end gap-1" style={{ height: 48 }}>
+                {stats.dailyTrend.map((d) => {
+                  const max = Math.max(...stats.dailyTrend.map((t) => t.count), 1);
+                  const pct = (d.count / max) * 100;
+                  return (
+                    <div
+                      key={d.date}
+                      className="flex-1 rounded-t bg-[var(--accent)]/60"
+                      style={{ height: `${Math.max(pct, 4)}%` }}
+                      title={`${d.date}: ${d.count} events`}
+                    />
+                  );
+                })}
+              </div>
+              <div className="mt-1 flex justify-between text-[9px] text-muted-foreground/50">
+                <span>{stats.dailyTrend[0]?.date.slice(5)}</span>
+                <span>{stats.dailyTrend[stats.dailyTrend.length - 1]?.date.slice(5)}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Event breakdown */}
+          {Object.keys(stats.byEventType).length > 0 && (
+            <div>
+              <p className="mb-2 text-[11px] font-medium text-foreground">
+                By Event Type
+              </p>
+              <div className="space-y-1">
+                {Object.entries(stats.byEventType)
+                  .sort(([, a], [, b]) => b - a)
+                  .map(([type, count]) => (
+                    <div
+                      key={type}
+                      className="flex items-center justify-between text-xs"
+                    >
+                      <span className="text-muted-foreground">{type.replace(/_/g, " ")}</span>
+                      <span className="font-medium text-foreground">{count}</span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

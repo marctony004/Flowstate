@@ -256,6 +256,19 @@ export default function AskFlowState({ open, onOpenChange, onAction }: AskFlowSt
         return;
       }
 
+      // Handle quota error surfaced as a friendly answer
+      if (data?.answer?.startsWith("AI error (429)") || data?.answer?.includes("rate-limited")) {
+        const quotaMsg: Message = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: "The AI assistant is unavailable — the Gemini API free tier quota is exhausted. To fix this, enable billing on your account at aistudio.google.com. Until then, you can still use the voice assistant (mic button) and all other app features.",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, quotaMsg]);
+        setIsLoading(false);
+        return;
+      }
+
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",

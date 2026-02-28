@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import Vapi from "@vapi-ai/web";
+import { toast } from "sonner";
 
 const VAPI_PUBLIC_KEY =
   import.meta.env.VITE_VAPI_PUBLIC_KEY || "YOUR_VAPI_PUBLIC_KEY_HERE";
@@ -224,6 +225,8 @@ export const useVapiAssistant = (
     const onError = (error: any) => {
       console.error("Vapi error:", error);
       setStatus(VapiStatus.ERROR);
+      const msg = error?.error?.message || error?.message || JSON.stringify(error);
+      toast.error(`Voice assistant error: ${msg}`);
     };
 
     const onMessage = (message: any) => {
@@ -305,9 +308,11 @@ export const useVapiAssistant = (
       try {
         // Use inline assistant config — constrains voice to RAG-only responses
         await vapi.start(buildAssistantConfig(userId) as any);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to start Vapi call", err);
         setStatus(VapiStatus.ERROR);
+        const msg = err?.error?.message || err?.message || String(err);
+        toast.error(`Failed to start voice: ${msg}`);
       }
     }
   };
